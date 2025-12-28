@@ -1,26 +1,41 @@
-import React, { useState, useEffect } from 'react';
-import { auth } from './services/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "./services/firebase.js"; 
 
-function App() {
+import Home from './pages/Home';
+import Navbar from './components/Navbar';
+import FooterCard from './components/FooterCard';
+import AuthPage from './pages/AuthPage';
+
+const App = () => {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    // This checks if a user is already signed in
+    // Listen for authentication changes
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
     });
-    return () => unsubscribe();
+    return () => unsubscribe(); 
   }, []);
 
   return (
-    <div>
-      {/* Logic: If user is logged in, show Dashboard. If not, show Login. */}
-      {user ? <Dashboard /> : <Login />}
-    </div>
+    <Router>
+      <div className="flex flex-col min-h-screen w-full overflow-hidden">
+       
+        <Navbar user={user} />
+
+        <main className="flex-grow">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<AuthPage />} />
+          </Routes>
+        </main>
+
+        <FooterCard />
+      </div>
+    </Router>
   );
-}
+};
 
 export default App;
