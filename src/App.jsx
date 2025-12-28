@@ -1,13 +1,26 @@
-import React from 'react';
-import Login from './pages/Login'; // This imports the page you built
+import React, { useState, useEffect } from 'react';
+import { auth } from './services/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
 
-const App = () => {
+function App() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    // This checks if a user is already signed in
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
   return (
     <div>
-      {/* This renders your Sign-in button and logic */}
-      <Login />
+      {/* Logic: If user is logged in, show Dashboard. If not, show Login. */}
+      {user ? <Dashboard /> : <Login />}
     </div>
-  )
+  );
 }
 
 export default App;
