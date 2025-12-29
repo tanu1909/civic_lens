@@ -1,7 +1,11 @@
 import React from 'react';
 import { Search, Globe } from 'lucide-react'; 
+import { useNavigate } from 'react-router-dom';// Hook for navigation (by member 2)
+
 
 const Navbar = () => {
+  const navigate = useNavigate();//Initializing the hook (by member 2)
+
   return (
     <nav className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-200 sticky top-0 z-50">
       {/* Brand */}
@@ -23,9 +27,12 @@ const Navbar = () => {
         <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-full">
           <Search size={20} />
         </button>
-        <button className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+        <button className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+        onClick={() => navigate('/scan')} //added logic to button(by member 2)
+        >
           Share Issues
         </button>
+        
       </div>
     </nav>
   );

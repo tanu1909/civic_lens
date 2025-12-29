@@ -7,6 +7,7 @@ import Home from './pages/Home';
 import Navbar from './components/Navbar';
 import FooterCard from './components/FooterCard';
 import AuthPage from './pages/AuthPage';
+import CameraCapture from './components/CameraCapture';// ai scanner imported(member 2)
 
 const App = () => {
   const [user, setUser] = useState(null);
@@ -29,6 +30,7 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<AuthPage />} />
+            <Route path="/scan" element={<CameraCapture />} /> {/*(member 2) Added route for the AI Camera Scanner. Accessible via /scan URL */}
           </Routes>
         </main>
 

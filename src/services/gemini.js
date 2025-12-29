@@ -1,20 +1,20 @@
 import {GoogleGenerativeAI} from "@google/generative-ai";
 
-const API_KEY=import.meta.env.VITE_GEMINI_API_KEY;
+const API_KEY=import.meta.env.VITE_GEMINI_API_KEY;//api key
 const genAI=new GoogleGenerativeAI(API_KEY);
 
-export async function ImageAnalysis(imageFile){
+export async function ImageAnalysis(imageFile){//function to analyze image
    try{
     if(!API_KEY){
         console.log("your API key is missing");
         return null;
     }
-// This uses the specific version number, which is much safer than "flash"
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    const imagePart = await fileToGenerativePart(imageFile);
+
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });//model of gemini
+    const imagePart = await fileToGenerativePart(imageFile);//converting image to text data to send to ai model
     console.log("image part- ",imagePart);
 
-// Logic Step D: The "Smarter" Prompt
+
   const prompt = `
     You are an AI Civic Issue Detector for the government. 
     Analyze this image for strictly "Civic Infrastructure Hazards" (e.g., deep potholes, broken streetlights, piles of garbage, fire hazards, dangerous cracks).
@@ -33,12 +33,12 @@ const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
       "isSafetyHazard": Boolean
     }
   `;
-    const result = await model.generateContent([prompt, imagePart]);
+    const result = await model.generateContent([prompt, imagePart]);//result in json
     const response = await result.response;
     const text = response.text();
     console.log(text);
 
-    const cleanText=text.replace(/```json|```/g,"").trim();
+    const cleanText=text.replace(/```json|```/g,"").trim();//cleaning the text
     console.log(cleanText);
     return JSON.parse(cleanText);
 
@@ -49,7 +49,7 @@ const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
    }
 }
 
-async function fileToGenerativePart(file) {
+async function fileToGenerativePart(file) {//function to convert the image file to its text data
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onloadend = () => resolve({
