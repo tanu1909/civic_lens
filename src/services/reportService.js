@@ -14,14 +14,14 @@ try{
   const downloadURL = await getDownloadURL(snapshot.ref);
   return downloadURL;
     }catch(e){
-        console.log("uplold failed: ",e);
+        console.error("uplold failed: ",e);
         throw e;
     }
   
 };
 // Data Save Function 
 export  async function saveReport(userId,imageUrl,aiDescription,location)
-{   console.log("saving......",userId,imageUrl,location);
+{   
     const aiScore = finalReport.aiSeverity || 0;
     const userScore = finalReport.userSeverity || 0;
     const mismatch = Math.abs(aiScore - userScore);
@@ -43,8 +43,8 @@ export  async function saveReport(userId,imageUrl,aiDescription,location)
             status:"pending",
             createdAt:serverTimestamp()
         });
-        console.log("docref, ", doRef);
-        console.log("Report saved. ID:", doRef.id, "| Suspicious?", isSuspicious);
+
+        console.log("Report saved");
 
         return doRef.id;
     }

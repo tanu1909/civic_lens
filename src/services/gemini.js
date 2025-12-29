@@ -12,7 +12,6 @@ export async function ImageAnalysis(imageFile){//function to analyze image
 
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });//model of gemini
     const imagePart = await fileToGenerativePart(imageFile);//converting image to text data to send to ai model
-    console.log("image part- ",imagePart);
 
 
   const prompt = `
@@ -36,15 +35,15 @@ const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });//model of
     const result = await model.generateContent([prompt, imagePart]);//result in json
     const response = await result.response;
     const text = response.text();
-    console.log(text);
+    
 
     const cleanText=text.replace(/```json|```/g,"").trim();//cleaning the text
-    console.log(cleanText);
+    
     return JSON.parse(cleanText);
 
    }
    catch(e){
-    console.log("Error fetching the detail ",e);
+    console.error("Error fetching the detail ",e);
     return null;
    }
 }

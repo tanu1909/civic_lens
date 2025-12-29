@@ -29,7 +29,7 @@ const CameraCapture = ()=>{//hook set up
             const data = await ImageAnalysis(file); 
             console.log("data = ", data);
             setReport(data);
-            setManualSeverity(data.severity || 5);
+            setManualSeverity(data.severity !== undefined ? data.severity : 5);
         } catch (error) {
             console.error(error);
             alert("AI Analysis Failed");
@@ -39,13 +39,16 @@ const CameraCapture = ()=>{//hook set up
 
 
     const handleSubmit=async()=>{//function to handle submission of report
+    
       if(!auth.currentUser) return alert("Login first! ");
       if (!imageFile) return alert("No image to upload!");
       setIsSubmitting(true);
 
       try{
         const imageUrl=await uploadImageToStorage(imageFile);
+
         if ("geolocation" in navigator) {
+            
                 navigator.geolocation.getCurrentPosition(async (position) => {
                     const location = {
                         lat: position.coords.latitude,
@@ -61,15 +64,28 @@ const CameraCapture = ()=>{//hook set up
                     await saveReport(auth.currentUser.uid, imageUrl, finalReport, location);
                     alert("Report Submitted Successfully!");
                     setIsSubmitting(false);
-                    navigate('/'); //  Go back home after success
-                });
+                    navigate('/'); 
+                },
+                    (error) => {
+                        console.error("Location Error:", error);
+                        
+                        //  error messages
+                        if (error.code === error.PERMISSION_DENIED) {
+                            alert("Location access denied! We need your location to tell the government where the problem is. Please enable location in your browser settings.");
+                        } else {
+                            alert("Could not fetch location. Please try again.");
+                        }
+                        
+                        setIsSubmitting(false); 
+                    }
+                );
             } else {
                 alert("Geolocation not supported");
                 setIsSubmitting(false);
             }
       }
       catch(e){
-        console.log("error ",e);
+        console.error("error ",e);
         alert("Something went wrong");
         setIsSubmitting(false);
       }
@@ -109,7 +125,7 @@ const CameraCapture = ()=>{//hook set up
                 ) : (
                    <span className="text-gray-500">Click to Scan Image</span>
                 )}
-                <input type="file" className="hidden" onChange={handleUpload} />
+                <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
              </label>
              
              {loading && <p className="text-center mt-4 text-blue-600 font-bold animate-pulse">AI Analyzing...</p>}
