@@ -45,7 +45,10 @@ const CameraCapture = ()=>{//hook set up
       setIsSubmitting(true);
 
       try{
+
+        console.log("Uploading image");
         const imageUrl=await uploadImageToStorage(imageFile);
+        console.log("image uploaded:",imageUrl);
 
         if ("geolocation" in navigator) {
             
@@ -55,13 +58,23 @@ const CameraCapture = ()=>{//hook set up
                         lng: position.coords.longitude
                     };
 
-                    const finalReport = {
-                        ...report,
-                        aiSeverity: report.severity, // Original AI guess
-                        userSeverity: manualSeverity // Final Human choice
-                    };
+                        const aiScore = report?.severity || 0;
+                        const userScore = manualSeverity;
+                        const mismatch = Math.abs(aiScore - userScore);
+                        const isSuspicious = mismatch > 4;
 
-                    await saveReport(auth.currentUser.uid, imageUrl, finalReport, location);
+                        await saveReport({
+                            userId: auth.currentUser.uid,
+                            imageUrl: imageUrl,
+                            issue: report?.issue || "General Issue",
+                            description: report?.description || "No details", // User description or AI description
+                            aiAnalysis: JSON.stringify(report), // Save raw AI data just in case
+                            severity: userScore,
+                            location: location,
+                            isSuspicious: isSuspicious,
+                            isSafetyHazard: report?.isSafetyHazard || false
+                        });
+
                     alert("Report Submitted Successfully!");
                     setIsSubmitting(false);
                     navigate('/'); 
@@ -85,7 +98,7 @@ const CameraCapture = ()=>{//hook set up
             }
       }
       catch(e){
-        console.error("error ",e);
+        console.error("Submission error ",e);
         alert("Something went wrong");
         setIsSubmitting(false);
       }

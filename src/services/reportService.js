@@ -1,56 +1,67 @@
-/* * REPORT SERVICE
- * Handles saving AI reports to Firebase.
+/* * REPORT SERVICE (SUPABASE VERSION)
+ * Handles saving reports to Supabase Database & Storage.
  */
 
-import {db,storage} from './firebase';
-import {collection,addDoc,serverTimestamp} from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage"; 
+import {createClient} from '@supabase/supabase-js' 
+
+
+const supabaseUrl=import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+const supabase = createClient(supabaseUrl, supabaseKey);
+
 
 //  Image Upload Function 
 export const uploadImageToStorage=async(imageFile)=>{
 try{
-  const storageRef = ref(storage, `reports/${Date.now()}_${imageFile.name}`);
-  const snapshot = await uploadBytes(storageRef, imageFile);
-  const downloadURL = await getDownloadURL(snapshot.ref);
-  return downloadURL;
+
+    const fileName = `${Date.now()}_${imageFile.name.replace(/\s/g, '_')}`;
+
+
+    const {data ,error }=await supabase.storage
+    .from('images')
+    .upload(fileName,imageFile);
+
+    if(error) throw error;
+
+    const {data:urlData}=supabase.storage
+    .from('images')
+    .getPublicUrl(fileName);
+
+    return urlData.publicUrl;
     }catch(e){
         console.error("uplold failed: ",e);
         throw e;
     }
   
 };
+
+
 // Data Save Function 
-export  async function saveReport(userId,imageUrl,aiDescription,location)
+export  async function saveReport(reportData)
 {   
-    const aiScore = finalReport.aiSeverity || 0;
-    const userScore = finalReport.userSeverity || 0;
-    const mismatch = Math.abs(aiScore - userScore);
-    const isSuspicious = mismatch > 4;
     try{
-        if (!db) {
-        throw new Error("Firebase DB connection is missing!");
-    }
-        const doRef=await addDoc(collection(db,"reports"),{
-            userId:userId||"anonymous",
-            imageUrl:imageUrl,
-            issue:aiDescription?.issue||"General Issue",
-            description: aiDescription?.description || "No details",
-            severity: userScore,
-            aiConfidenceScore:aiScore,
-            isSuspicious:isSuspicious,
-            sSafetyHazard: aiDescription.isSafetyHazard||false,
-            location:location,
-            status:"pending",
-            createdAt:serverTimestamp()
-        });
+        const {data,error}=await supabase
+        .from('reports')
+        .insert([{
+            description: reportData.description,
+            aiAnalysis: reportData.aiAnalysis, // The full AI text
+            issue: reportData.issue, // Short title
+            severity: parseInt(reportData.severity),
+            location: reportData.location, // Store as string or JSON
+            imageUrl: reportData.imageUrl,
+            isSuspicious: reportData.isSuspicious,
+            isSafetyHazard: reportData.isSafetyHazard,
+            status: 'Pending',
+            userId: reportData.userId
+        }])
+        .select();
+        if(error) throw error;
 
-        console.log("Report saved");
-
-        return doRef.id;
-    }
-    catch(e){
-        console.error("Error adding report:",e);
+        console.log("Report saved to supabase:",data);
+        return data;
+    }catch(e){
+        console.log("error adding reports:",e);
         throw e;
     }
-
 }
