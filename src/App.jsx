@@ -7,6 +7,8 @@ import Home from './pages/Home';
 import Navbar from './components/Navbar';
 import FooterCard from './components/FooterCard';
 import AuthPage from './pages/AuthPage';
+import About from './pages/About.jsx';
+import Feedback from './pages/Feedback.jsx';
 
 const App = () => {
   const [user, setUser] = useState(null);
@@ -29,6 +31,8 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<AuthPage />} />
+            <Route path="/about" element={<About/>}/>
+            <Route path="/feedback" element={<Feedback/>}/>
           </Routes>
         </main>
 

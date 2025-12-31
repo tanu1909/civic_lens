@@ -27,15 +27,15 @@ const AuthPage = () => {
         // Log in existing user
         await signInWithEmailAndPassword(auth, email, password);
       } else {
-        // 1. Create the new user
+        // Create the new user
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         
-        // 2. Immediately update their profile with the Full Name
+        // Immediately update their profile with the Full Name
         await updateProfile(userCredential.user, {
           displayName: fullName
         });
       }
-      // 3. Redirect to home on success
+      // Redirect to home on success
       navigate('/');
     } catch (err) {
       // error mapping
