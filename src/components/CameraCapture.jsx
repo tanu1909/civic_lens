@@ -10,11 +10,15 @@ const CameraCapture = ()=>{//hook set up
 
     const[image,setImage]=useState(null);// Stores the Preview URL (for showing on screen)
     const [imageFile, setImageFile] = useState(null); // Stores actual file (for uploading)
-    const[loading,setLoading]=useState(false);
-    const[report,setReport]=useState(null);
-    const[isSubmitting,setIsSubmitting]=useState(false);
-    const [manualSeverity, setManualSeverity] = useState(0);
 
+    const[loading,setLoading]=useState(false);
+    const [loadingText, setLoadingText] = useState("");
+    const[isSubmitting,setIsSubmitting]=useState(false);
+    const [showToast,setShowToast]=useState(false);
+
+    const[report,setReport]=useState(null);
+    const [manualSeverity, setManualSeverity] = useState(0);
+    
     const handleUpload=async(e)=>{//function to handel uploads
         const file=e.target.files[0];
         if(!file) return;
@@ -23,16 +27,19 @@ const CameraCapture = ()=>{//hook set up
         setImageFile(file);
 
         setLoading(true);
+        setLoadingText("AI is Analyzing...");
         setReport(null);
         
         try {
             const data = await ImageAnalysis(file); 
             console.log("data = ", data);
+
             setReport(data);
+
             setManualSeverity(data.severity !== undefined ? data.severity : 5);
         } catch (error) {
             console.error(error);
-            alert("AI Analysis Failed");
+            alert("AI Analysis Failed.Please try a clearer image.");
         }
         setLoading(false);
     };
@@ -42,15 +49,18 @@ const CameraCapture = ()=>{//hook set up
     
       if(!auth.currentUser) return alert("Login first! ");
       if (!imageFile) return alert("No image to upload!");
+
       setIsSubmitting(true);
 
       try{
-
+        setLoadingText("Uploading Evidence...");
         console.log("Uploading image");
         const imageUrl=await uploadImageToStorage(imageFile);
         console.log("image uploaded:",imageUrl);
 
         if ("geolocation" in navigator) {
+
+            setLoadingText("📍 Acquiring Location...");
             
                 navigator.geolocation.getCurrentPosition(async (position) => {
                     const location = {
@@ -62,6 +72,19 @@ const CameraCapture = ()=>{//hook set up
                         const userScore = manualSeverity;
                         const mismatch = Math.abs(aiScore - userScore);
                         const isSuspicious = mismatch > 4;
+                        setLoadingText(" Saving .....");
+
+                        if (isSuspicious) {
+                            const confirmSubmit = window.confirm(
+                                `⚠️ SPAM DETECTION WARNING ⚠️\n\nAI rated this: ${aiScore}/10\nYou rated this: ${userScore}/10\n\nThis huge difference flags your report as "Suspicious". Admins will review it manually.\n\nDo you still want to submit?`
+                            );
+    
+                            // If user clicks "Cancel", stop everything
+                            if (!confirmSubmit) {
+                                setIsSubmitting(false);
+                                return; 
+                            }
+                        }
 
                         await saveReport({
                             userId: auth.currentUser.uid,
@@ -74,12 +97,16 @@ const CameraCapture = ()=>{//hook set up
                             isSuspicious: isSuspicious,
                             isSafetyHazard: report?.isSafetyHazard || false
                         });
-
-                    alert("Report Submitted Successfully!");
+                    setLoadingText("✅ Done!");
+                    setShowToast(true);
                     setIsSubmitting(false);
-                    navigate('/'); 
+                    setTimeout(() => {
+                    setShowToast(false); // Hide toast
+                    navigate('/');       // THEN go home
+                    }, 2000);
+
                 },
-                    (error) => {
+                (error) => {
                         console.error("Location Error:", error);
                         
                         //  error messages
@@ -90,7 +117,7 @@ const CameraCapture = ()=>{//hook set up
                         }
                         
                         setIsSubmitting(false); 
-                    }
+                }
                 );
             } else {
                 alert("Geolocation not supported");
@@ -141,7 +168,7 @@ const CameraCapture = ()=>{//hook set up
                 <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
              </label>
              
-             {loading && <p className="text-center mt-4 text-blue-600 font-bold animate-pulse">AI Analyzing...</p>}
+             {loading && <p className="text-center mt-4 text-blue-600 font-bold animate-pulse">{loadingText}</p>}
           </div>
 
             {report && (
@@ -149,6 +176,7 @@ const CameraCapture = ()=>{//hook set up
                     <div className={`p-4 rounded-lg border-l-4 ${report.isSafetyHazard ? 'bg-red-50 border-red-500' : 'bg-green-50 border-green-50'}`}>
                         <h3 className="font-bold text-lg">{report.issue}</h3>
                         <p className="text-sm text-gray-700 mt-1">{report.description}</p>
+
                         {/* <--- SLIDER UI START ---> */}
                                 <div className="mt-4 pt-4 border-t border-gray-200">
                                     <label className="text-xs font-bold uppercase text-gray-700 tracking-wider">
@@ -171,7 +199,7 @@ const CameraCapture = ()=>{//hook set up
                                        AI suggested {report.severity}. Adjust if incorrect.
                                     </p>
                                 </div>
-                                {/* <--- SLIDER UI END ---> */}
+                        {/* <--- SLIDER UI END ---> */}
 
                             </div>
 
@@ -185,6 +213,21 @@ const CameraCapture = ()=>{//hook set up
                             >
                                 {isSubmitting ? 'Uploading Report...' : '📍 Submit Report'}
                             </button>
+                        </div>
+                    )}
+
+                    {isSubmitting && (
+                        <div className="absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center z-50 rounded-2xl">
+                        <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent mb-4"></div>
+                        <p className="text-blue-600 font-bold text-lg animate-pulse">
+                        {loadingText}
+                        </p>
+                        </div>
+                    )}
+
+                    {showToast && (
+                        <div className="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-full shadow-xl flex items-center gap-2 animate-bounce z-50">
+                            ✅ Report Submitted Successfully!
                         </div>
                     )}
                 </div>
