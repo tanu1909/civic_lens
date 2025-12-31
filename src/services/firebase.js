@@ -1,44 +1,19 @@
-// import { getFirestore } from "firebase/firestore";
-// import { initializeApp } from "firebase/app";
-// import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-
-// const firebaseConfig = {
-//   apiKey: "AIzaSyCXZxhQg5On-ik9J4w6eiXrFbfFQqrh-BY",
-//   authDomain: "civiclens-hackathon.firebaseapp.com",
-//   projectId: "civiclens-hackathon",
-//   storageBucket: "civiclens-hackathon.firebasestorage.app",
-//   messagingSenderId: "719064968318",
-//   appId: "1:719064968318:web:1d405eb44c75342377bc2f"
-// };
-
-// const app = initializeApp(firebaseConfig);
-// export const auth = getAuth(app);
-// const provider = new GoogleAuthProvider();
-
-// export const signInWithGoogle = () => {
-//   return signInWithPopup(auth, provider);
-// };
-
-// export const db = getFirestore(app);
-
-
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-
-import { getFirestore } from "firebase/firestore"; 
+import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-   apiKey: "AIzaSyD2hJ6A9DgjJgH30_U1Z9oXI9hJK89ON_Q",
-   authDomain: "civiclens1-hackathon.firebaseapp.com",
-   projectId: "civiclens1-hackathon",
-   storageBucket: "civiclens1-hackathon.firebasestorage.app",
-   messagingSenderId: "10486866322",
-   appId: "1:10486866322:web:1ad4274c4bc16a1b09614b"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 const app = initializeApp(firebaseConfig);
 
-// Initialize Authentication
+// Auth
 export const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
@@ -46,5 +21,5 @@ export const signInWithGoogle = () => {
   return signInWithPopup(auth, provider);
 };
 
-
+// Firestore
 export const db = getFirestore(app);
