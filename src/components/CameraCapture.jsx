@@ -3,6 +3,7 @@ import {ImageAnalysis} from '../services/gemini';//importing function from gemin
 import { uploadImageToStorage, saveReport } from '../services/reportService';
 import {auth} from '../services/firebase';
 import { useNavigate } from 'react-router-dom'; // For navigation
+import imageCompression from 'browser-image-compression';
 
 
 const CameraCapture = ()=>{//hook set up
@@ -23,15 +24,25 @@ const CameraCapture = ()=>{//hook set up
         const file=e.target.files[0];
         if(!file) return;
 
-        setImage(URL.createObjectURL(file));
-        setImageFile(file);
+        const options = {
+        maxSizeMB: 0.5,          // Limit to 0.5MB (500KB)
+        maxWidthOrHeight: 1280,  // Resize large images
+        useWebWorker: true,      // Run faster
+        };
+
+        setLoadingText("Compressing Image...");
+        setLoading(true);
+        const compressedFile = await imageCompression(file, options);
+
+        setImage(URL.createObjectURL(compressedFile));
+        setImageFile(compressedFile);
 
         setLoading(true);
         setLoadingText("AI is Analyzing...");
         setReport(null);
         
         try {
-            const data = await ImageAnalysis(file); 
+            const data = await ImageAnalysis(compressedFile); 
             console.log("data = ", data);
 
             setReport(data);
