@@ -1,9 +1,7 @@
-import React from 'react'
+import MapBoard from './components/MapBoard';
 
 const App = () => {
-  return (
-    <div>App</div>
-  )
-}
+  return <MapBoard />;
+};
 
-export default App
+export default App;
