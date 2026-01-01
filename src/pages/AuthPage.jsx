@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { auth, signInWithGoogle } from '../services/firebase.js'; 
 import { 
   createUserWithEmailAndPassword, 
@@ -10,12 +10,17 @@ import { Mail, Lock, User, ArrowRight, Chrome } from 'lucide-react';
 
 const AuthPage = () => {
   const navigate = useNavigate();
+  const location = useLocation(); // To track where the user came from
+  
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState(''); 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Determine the redirect path: prioritize the page they tried to access, else Home
+  const from = location.state?.from || '/';
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -35,8 +40,8 @@ const AuthPage = () => {
           displayName: fullName
         });
       }
-      // Redirect to home on success
-      navigate('/');
+      // Redirect to intended destination (e.g., /scan) or Home
+      navigate(from, { replace: true });
     } catch (err) {
       // error mapping
       if (err.code === 'auth/email-already-in-use') {
@@ -57,7 +62,8 @@ const AuthPage = () => {
     setError('');
     try {
       await signInWithGoogle();
-      navigate('/');
+      // Redirect to intended destination (e.g., /scan) or Home
+      navigate(from, { replace: true });
     } catch (err) {
       setError("Google sign-in was interrupted. Please try again.");
     }
@@ -105,6 +111,7 @@ const AuthPage = () => {
             <input 
               type="email" 
               placeholder="Email Address"
+              value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
               required
@@ -116,6 +123,7 @@ const AuthPage = () => {
             <input 
               type="password" 
               placeholder="Password"
+              value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
               required
