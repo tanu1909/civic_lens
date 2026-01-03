@@ -12,6 +12,7 @@ import About from './pages/About.jsx';
 import Feedback from './pages/Feedback.jsx';
 
 import CameraCapture from './components/CameraCapture';// ai scanner imported(member 2)
+import UserHistory from './pages/UserHistory';//(by mem-2)
 
 
 const App = () => {
@@ -40,6 +41,7 @@ const App = () => {
             <Route path="/feedback" element={<Feedback/>}/>
 
             <Route path="/scan" element={<CameraCapture />} /> {/*(member 2) Added route for the AI Camera Scanner. Accessible via /scan URL */}
+            <Route path="/history" element={<UserHistory />} />{/*by mem-2*/}
 
           </Routes>
         </main>

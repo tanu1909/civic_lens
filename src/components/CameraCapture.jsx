@@ -45,6 +45,12 @@ const CameraCapture = ()=>{//hook set up
             const data = await ImageAnalysis(compressedFile); 
             console.log("data = ", data);
 
+            if (!data || !data.issue || data.issue === "Unclear" || data.issue === "Unable to identify") {
+            alert("⚠️ Image Unclear: The AI could not detect any specific civic issue.\n\nPlease take a closer, clearer photo and try again.");
+            setLoading(false);
+            return; // <--- STOP HERE. Do not set the report.
+            }
+
             setReport(data);
 
             setManualSeverity(data.severity !== undefined ? data.severity : 5);
@@ -60,6 +66,10 @@ const CameraCapture = ()=>{//hook set up
     
       if(!auth.currentUser) return alert("Login first! ");
       if (!imageFile) return alert("No image to upload!");
+      if (manualSeverity < 4) {
+        alert("⚠️ Report Rejected: The severity score is too low.\n\nOnly issues with a severity of 4 or higher can be submitted to keep the system efficient.");
+        return; // Stops the function here. Nothing gets uploaded.
+    }
 
       setIsSubmitting(true);
 
