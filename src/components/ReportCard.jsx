@@ -1,7 +1,7 @@
 import React from 'react';
 import { MapPin, Calendar, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 
-const ReportCard = ({ report }) => {
+const ReportCard = ({ report ,onDelete}) => {
 
     const getStatusStyle = (status) => {
         switch(status?.toLowerCase()){
@@ -26,6 +26,23 @@ const ReportCard = ({ report }) => {
                     onError={(e) => { e.target.src = "https://placehold.co/400x300?text=No+Image"; }}
                 />
                 
+                {/* Only show Delete button if status is 'Pending' */}
+                {report.status === 'Pending' && onDelete && (
+                    <button 
+                        onClick={(e) => {
+                        e.stopPropagation(); // Prevent clicking the card itself
+                        onDelete();
+                        }}
+                    className="absolute top-3 left-3 bg-white/90 p-1.5 rounded-full text-red-500 hover:bg-red-50 hover:text-red-700 transition-colors shadow-sm z-10"
+                    title="Delete Report"
+                    >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 6h18"></path>
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                    </svg>
+                    </button>
+                )}
                 <div className='absolute top-3 right-3 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold shadow-sm flex items-center gap-1 text-gray-600'>
                     <Calendar size={12} />
                     {date}

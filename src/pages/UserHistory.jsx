@@ -34,6 +34,26 @@ const UserHistory = () => {
         ? reports 
         : reports.filter(r => (r.status || 'Pending').toLowerCase() === filter.toLowerCase());
 
+    const handleDelete = async (reportId) => {
+    if(!window.confirm("Are you sure you want to delete this report?")) return;
+
+    
+    setReports(reports.filter(r => r.id !== reportId));
+
+    try {
+        const { error } = await supabase
+            .from('reports')
+            .delete()
+            .eq('id', reportId);
+
+        if (error) throw error;
+         alert("Report deleted"); 
+    } catch (error) {
+        console.error("Delete failed:", error);
+        alert("Failed to delete. Please refresh.");
+    }
+    };
+
     return (
         <div className="min-h-screen bg-gray-50/50 pb-12">
             
@@ -92,7 +112,7 @@ const UserHistory = () => {
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         {filteredReports.map((report) => (
-                            <ReportCard key={report.id} report={report} />
+                            <ReportCard key={report.id} report={report} onDelete={() => handleDelete(report.id)} />
                         ))}
                     </div>
                 )}
