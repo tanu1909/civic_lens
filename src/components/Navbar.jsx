@@ -1,10 +1,30 @@
 import React, { useState } from 'react';
-import { NavLink, Link, useNavigate } from 'react-router-dom';
-import { Search, Menu, X } from 'lucide-react';
+import { NavLink, Link, useNavigate } from 'react-router-dom'; 
+import { Search, Menu, X, LogOut } from 'lucide-react'; 
+import { auth } from '../services/firebase.js'; 
+import { signOut } from 'firebase/auth';
 
-const Navbar = () => {
+const Navbar = ({ user }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const navigate = useNavigate(); // Hook for your 'Scan' navigation
+  const navigate = useNavigate();
+
+  const handleShareClick = () => {
+    if (user) {
+      navigate('/scan');
+    } else {
+      // Pass the intended destination so AuthPage can redirect back
+      navigate('/login', { state: { from: '/scan' } });
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate('/');
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
 
   const navLinkStyles = ({ isActive }) => 
     isActive 
@@ -21,15 +41,18 @@ const Navbar = () => {
           <span className="text-xl font-bold text-gray-900 tracking-tight">CivicLens</span>
         </Link>
 
-        {/* DESKTOP NAV LINKS (Team Lead's Links) */}
+        {/* Desktop Menu */}
         <ul className="hidden md:flex items-center gap-8 text-sm">
           <li><NavLink to="/" className={navLinkStyles}>Home</NavLink></li>
           <li><NavLink to="/explore" className={navLinkStyles}>Explore Data</NavLink></li>
           <li><NavLink to="/issues" className={navLinkStyles}>Local Issues</NavLink></li>
-          {/* You can manually add <NavLink to="/history">My Reports</NavLink> here if you want it always visible */}
+          {/* <--- by mem-2 --- */}
+          {user && (
+             <li><NavLink to="/history" className={navLinkStyles}>My Reports</NavLink></li>
+          )}
         </ul>
 
-        {/* ACTION BUTTONS (Right Side) */}
+        {/* Desktop Actions */}
         <div className="flex items-center gap-2 md:gap-4">
           
           {/* Search Button (Team Lead's Design) */}
@@ -37,19 +60,25 @@ const Navbar = () => {
             <Search size={20} />
           </button>
           
-          {/* YOUR FEATURE: Share Issues Button -> Goes to /scan */}
           <button 
-            onClick={() => navigate('/scan')}
-            className="hidden sm:block px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+            className="hidden sm:block px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-all"
+            onClick={handleShareClick}
           >
-            Share Issues
+            {user ? 'Share Issues' : 'Login to Share'}
           </button>
 
-          {/* Mobile Menu Toggle */}
-          <button 
-            className="md:hidden p-2 text-gray-600"
-            onClick={() => setIsOpen(!isOpen)}
-          >
+          {user && (
+            <button 
+              onClick={handleLogout}
+              className="p-2 text-gray-500 hover:text-red-600 transition-colors"
+              title="Logout"
+            >
+              <LogOut size={20} />
+            </button>
+          )}
+
+          {/* Mobile Toggle */}
+          <button className="md:hidden p-2 text-gray-600" onClick={() => setIsOpen(!isOpen)}>
             {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
@@ -62,15 +91,22 @@ const Navbar = () => {
             <li><NavLink to="/" onClick={() => setIsOpen(false)} className={navLinkStyles}>Home</NavLink></li>
             <li><NavLink to="/explore" onClick={() => setIsOpen(false)} className={navLinkStyles}>Explore Data</NavLink></li>
             <li><NavLink to="/issues" onClick={() => setIsOpen(false)} className={navLinkStyles}>Local Issues</NavLink></li>
+            {/* <--- by mem-2 --- */}
+            {user && (
+               <li><NavLink to="/history" onClick={() => setIsOpen(false)} className={navLinkStyles}>My Reports</NavLink></li>
+            )}
           </ul>
-          
-          {/* Mobile Share Button */}
           <button 
-            onClick={() => { navigate('/scan'); setIsOpen(false); }}
+            onClick={() => { setIsOpen(false); handleShareClick(); }}
             className="block w-full text-center py-3 bg-blue-600 text-white font-semibold rounded-lg"
           >
-            Share Issues
+            {user ? 'Share Issues' : 'Login to Share'}
           </button>
+          {user && (
+            <button onClick={handleLogout} className="w-full py-2 text-red-600 font-medium">
+              Logout
+            </button>
+          )}
         </div>
       )}
     </nav>
