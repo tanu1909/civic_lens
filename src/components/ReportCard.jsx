@@ -26,11 +26,11 @@ const ReportCard = ({ report ,onDelete}) => {
                     onError={(e) => { e.target.src = "https://placehold.co/400x300?text=No+Image"; }}
                 />
                 
-                {/* Only show Delete button if status is 'Pending' */}
+                {/* Only showing Delete button if status is 'Pending' */}
                 {report.status === 'Pending' && onDelete && (
                     <button 
                         onClick={(e) => {
-                        e.stopPropagation(); // Prevent clicking the card itself
+                        e.stopPropagation(); // Preventing clicking the card itself
                         onDelete();
                         }}
                     className="absolute top-3 left-3 bg-white/90 p-1.5 rounded-full text-red-500 hover:bg-red-50 hover:text-red-700 transition-colors shadow-sm z-10"
@@ -74,7 +74,14 @@ const ReportCard = ({ report ,onDelete}) => {
                 <div className='mt-auto pt-4 border-t border-gray-100'>
                     <div className='flex items-center gap-1.5 text-xs text-gray-500 mb-3'>
                         <MapPin size={14} className="text-blue-500" />
-                        <span className="truncate">{report.location ? "Location Captured" : "No Location Data"}</span>
+                        <span className="truncate">
+                            {/* Checking if location has an address string, otherwise showing coords or default */}
+                            {report.location?.address 
+                                ? report.location.address 
+                                : report.location 
+                                    ? "GPS Location Captured" 
+                                    : "No Location Data"}
+                        </span>
                     </div>
 
                     <div className='flex items-center justify-between text-xs font-semibold text-gray-700 mb-1.5'>
