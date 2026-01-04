@@ -56,7 +56,9 @@ const ReportCard = ({ report ,onDelete}) => {
             <div className='p-5 flex-1 flex flex-col'>
                 
                 <div className='flex justify-between items-start gap-3 mb-3'>
-                    <h3 className='font-bold text-gray-900 text-lg leading-tight line-clamp-1 group-hover:text-blue-600 transition-colors'>
+                    <h3 className='font-bold text-gray-900 text-lg leading-tight line-clamp-1 group-hover:text-blue-600 transition-colors'
+                    title={report.issue}
+                    >
                         {report.issue || "Reported Issue"}
                     </h3>
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border flex items-center gap-1 ${statusStyle.color}`}>
