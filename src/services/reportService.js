@@ -1,17 +1,5 @@
-/* * REPORT SERVICE (SUPABASE VERSION)
- * Handles saving reports to Supabase Database & Storage.
- */
+import { supabase } from '../supabaseClient';
 
-import {createClient} from '@supabase/supabase-js' 
-
-
-const supabaseUrl=import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-
-//  Image Upload Function 
 export const uploadImageToStorage=async(imageFile)=>{
 try{
 
