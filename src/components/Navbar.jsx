@@ -35,6 +35,7 @@ const Navbar = ({ user }) => {
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="flex items-center justify-between px-6 md:px-8 py-4">
   
+        {/* LOGO */}
         <Link to="/" className="flex items-center gap-2">
           <div className="w-8 h-8 bg-blue-600 rounded-full"></div>
           <span className="text-xl font-bold text-gray-900 tracking-tight">CivicLens</span>
@@ -45,10 +46,16 @@ const Navbar = ({ user }) => {
           <li><NavLink to="/" className={navLinkStyles}>Home</NavLink></li>
           <li><NavLink to="/explore" className={navLinkStyles}>Explore Data</NavLink></li>
           <li><NavLink to="/issues" className={navLinkStyles}>Local Issues</NavLink></li>
+          {/* <--- by mem-2 --- */}
+          {user && (
+             <li><NavLink to="/history" className={navLinkStyles}>My Reports</NavLink></li>
+          )}
         </ul>
 
         {/* Desktop Actions */}
         <div className="flex items-center gap-2 md:gap-4">
+          
+          {/* Search Button (Team Lead's Design) */}
           <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-full">
             <Search size={20} />
           </button>
@@ -77,13 +84,17 @@ const Navbar = ({ user }) => {
         </div>
       </div>
 
-      {/* Mobile Menu Dropdown */}
+      {/* MOBILE MENU DROPDOWN */}
       {isOpen && (
         <div className="md:hidden bg-white border-t border-gray-100 p-4 space-y-4 shadow-lg">
           <ul className="flex flex-col gap-4 text-sm font-medium">
             <li><NavLink to="/" onClick={() => setIsOpen(false)} className={navLinkStyles}>Home</NavLink></li>
             <li><NavLink to="/explore" onClick={() => setIsOpen(false)} className={navLinkStyles}>Explore Data</NavLink></li>
             <li><NavLink to="/issues" onClick={() => setIsOpen(false)} className={navLinkStyles}>Local Issues</NavLink></li>
+            {/* <--- by mem-2 --- */}
+            {user && (
+               <li><NavLink to="/history" onClick={() => setIsOpen(false)} className={navLinkStyles}>My Reports</NavLink></li>
+            )}
           </ul>
           <button 
             onClick={() => { setIsOpen(false); handleShareClick(); }}

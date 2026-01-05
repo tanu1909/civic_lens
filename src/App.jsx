@@ -3,14 +3,17 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./services/firebase";
 
-// Pages & Components
+// Components
 import Navbar from "./components/Navbar";
 import FooterCard from "./components/FooterCard";
+import CameraCapture from "./components/CameraCapture";
+
+// Pages
 import Home from "./pages/Home";
 import AuthPage from "./pages/AuthPage";
 import About from "./pages/About";
 import Feedback from "./pages/Feedback";
-import CameraCapture from "./components/CameraCapture";
+import UserHistory from "./pages/UserHistory";
 import AdminFeedback from "./pages/AdminFeedback";
 
 const App = () => {
@@ -57,6 +60,8 @@ const App = () => {
                 )
               }
             />
+            {/* Added from merge conflict resolution */}
+            <Route path="/history" element={<UserHistory />} />
 
             <Route path="/admin/feedback" element={<AdminFeedback />} />
           </Routes>
