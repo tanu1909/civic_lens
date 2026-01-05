@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../services/reportService';
+import { supabase } from '../services/supabaseClient';
 import { auth } from '../services/firebase';
 import ReportCard from '../components/ReportCard';
 import { Link } from 'react-router-dom';
