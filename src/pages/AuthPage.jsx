@@ -6,11 +6,11 @@ import {
   signInWithEmailAndPassword,
   updateProfile 
 } from "firebase/auth";
-import { Mail, Lock, User, ArrowRight, Chrome } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Chrome, Eye, EyeOff } from 'lucide-react';
 
 const AuthPage = () => {
   const navigate = useNavigate();
-  const location = useLocation(); // To track where the user came from
+  const location = useLocation();
   
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
@@ -18,8 +18,8 @@ const AuthPage = () => {
   const [fullName, setFullName] = useState(''); 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  // Determine the redirect path: prioritize the page they tried to access, else Home
   const from = location.state?.from || '/';
 
   const handleAuth = async (e) => {
@@ -29,21 +29,15 @@ const AuthPage = () => {
 
     try {
       if (isLogin) {
-        // Log in existing user
         await signInWithEmailAndPassword(auth, email, password);
       } else {
-        // Create the new user
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        
-        // Immediately update their profile with the Full Name
         await updateProfile(userCredential.user, {
           displayName: fullName
         });
       }
-      // Redirect to intended destination (e.g., /scan) or Home
       navigate(from, { replace: true });
     } catch (err) {
-      // error mapping
       if (err.code === 'auth/email-already-in-use') {
         setError("This email is already registered. Try logging in.");
       } else if (err.code === 'auth/weak-password') {
@@ -62,7 +56,6 @@ const AuthPage = () => {
     setError('');
     try {
       await signInWithGoogle();
-      // Redirect to intended destination (e.g., /scan) or Home
       navigate(from, { replace: true });
     } catch (err) {
       setError("Google sign-in was interrupted. Please try again.");
@@ -73,7 +66,6 @@ const AuthPage = () => {
     <div className="min-h-[80vh] flex items-center justify-center px-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
         
-        {/* Header */}
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-slate-900">
             {isLogin ? 'Welcome Back' : 'Create Account'}
@@ -85,7 +77,6 @@ const AuthPage = () => {
           </p>
         </div>
 
-        {/* Error Display */}
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-600 text-xs rounded-lg">
             {error}
@@ -121,13 +112,21 @@ const AuthPage = () => {
           <div className="relative">
             <Lock className="absolute left-3 top-3 text-slate-400" size={18} />
             <input 
-              type="password" 
+              type={showPassword ? "text" : "password"} 
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full pl-10 pr-12 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
               required
             />
+            {/* Visibility Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
           </div>
 
           <button 
@@ -156,7 +155,6 @@ const AuthPage = () => {
           </button>
         </div>
 
-        {/* Toggle Link */}
         <div className="mt-8 text-center border-t border-slate-100 pt-6">
           <p className="text-sm text-slate-600">
             {isLogin ? "Don't have an account?" : "Already have an account?"}
@@ -165,6 +163,7 @@ const AuthPage = () => {
               onClick={() => {
                 setIsLogin(!isLogin);
                 setError('');
+                setShowPassword(false); // Reset visibility on switch
               }}
               className="ml-2 text-blue-600 font-bold hover:underline"
             >

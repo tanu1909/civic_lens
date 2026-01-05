@@ -14,24 +14,31 @@ const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });//model of
     const imagePart = await fileToGenerativePart(imageFile);//converting image to text data to send to ai model
 
 
-  const prompt = `
-    You are an AI Civic Issue Detector for the government. 
-    Analyze this image for strictly "Civic Infrastructure Hazards" (e.g., deep potholes, broken streetlights, piles of garbage, fire hazards, dangerous cracks).
 
-    STRICT RULES:
-    1. If the image looks like a normal, safe public area (like a park, a clean road, or a building) with only minor wear and tear, return "isSafetyHazard": false and severity: 0.
-    2. Do NOT flag minor things like "faded paint", "patches of dirt", or "small cracks" as hazards.
-    3. Only flag issues that require a repair crew to come out.
-    4. Return valid JSON only.
+const prompt = `
+  Analyze this image for civic issues (potholes, garbage, broken streetlights, waterlogging, etc.).
+  
+  CRITICAL INSTRUCTION: First, check the image quality.
+  
+  1. IF THE IMAGE IS BLURRY, TOO DARK, OR UNCLEAR:
+     - Set 'issue' to "Image Unclear".
+     - Set 'description' to "The image is too blurry or dark to analyze. Please retake a clear photo."
+     - Set 'severity' to 0.
+  
+  2. IF THE IMAGE IS CLEAR BUT HAS NO ISSUES:
+     - Set 'issue' to "No Hazard Detected".
+     - Set 'description' to "The area appears safe with no visible civic infrastructure issues."
+     - Set 'severity' to 0.
 
-    JSON Structure:
-    {
-      "issue": "Short Title",
-      "description": "Brief explanation",
-      "severity": Number (1-10, where 10 is immediate death risk, 0 is safe),
-      "isSafetyHazard": Boolean
-    }
-  `;
+  3. IF A VALID ISSUE IS FOUND:
+     - Identify the specific issue (e.g., "Deep Pothole", "Garbage Dump").
+     - Describe it in 2 sentences.
+     - Rate severity 1-10.
+
+  Output MUST be valid JSON:
+  { "issue": "String", "description": "String", "severity": Number }
+`;
+  
     const result = await model.generateContent([prompt, imagePart]);//result in json
     const response = await result.response;
     const text = response.text();
