@@ -36,23 +36,22 @@ const App = () => {
         <main className="flex-grow">
           <Routes>
             <Route path="/" element={<Home />} />
-<<<<<<< Updated upstream
+
             <Route path="/login" element={<AuthPage />} />
-=======
             
             {/* If user is already logged in, redirect them away from the login page */}
             <Route 
               path="/login" 
               element={!user ? <AuthPage /> : <Navigate to="/" replace />} 
             />
->>>>>>> Stashed changes
+
 
             <Route path="/about" element={<About/>}/>
             <Route path="/feedback" element={<Feedback/>}/>
 
-<<<<<<< Updated upstream
+
             <Route path="/scan" element={<CameraCapture />} /> {/*(member 2) Added route for the AI Camera Scanner. Accessible via /scan URL */}
-=======
+
             {/* Protected Route: Redirects to login if not authenticated */}
             <Route 
               path="/scan" 
@@ -65,7 +64,7 @@ const App = () => {
             {/* --- YOUR NEW ROUTE --- */}
             {/* Access this by going to http://localhost:5173/admin */}
             <Route path="/admin" element={<AdminDashboard />} />
->>>>>>> Stashed changes
+
 
           </Routes>
         </main>
