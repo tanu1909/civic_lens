@@ -9,7 +9,9 @@ import FooterCard from './components/FooterCard';
 import AuthPage from './pages/AuthPage';
 import About from './pages/About.jsx';
 import Feedback from './pages/Feedback.jsx';
-import CameraCapture from './components/CameraCapture';
+
+import CameraCapture from './components/CameraCapture';// ai scanner imported(member 2)
+import UserHistory from './pages/UserHistory';//(by mem-2)
 import AdminFeedback from './pages/AdminFeedback.jsx';
 
 const App = () => {
@@ -46,6 +48,8 @@ const App = () => {
               path="/scan" 
               element={user ? <CameraCapture user={user} /> : <Navigate to="/login" state={{ from: '/scan' }} replace />} 
             />
+            <Route path="/history" element={<UserHistory />} />{/*by mem-2 */}
+
             <Route path="/admin/feedback" element={<AdminFeedback />} />
           </Routes>
         </main>
