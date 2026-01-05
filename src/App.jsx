@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./services/firebase.js"; 
 
@@ -7,12 +7,10 @@ import Home from './pages/Home';
 import Navbar from './components/Navbar';
 import FooterCard from './components/FooterCard';
 import AuthPage from './pages/AuthPage';
-
 import About from './pages/About.jsx';
 import Feedback from './pages/Feedback.jsx';
-
-import CameraCapture from './components/CameraCapture';// ai scanner imported(member 2)
-
+import CameraCapture from './components/CameraCapture';
+import AdminFeedback from './pages/AdminFeedback.jsx';
 
 import AdminDashboard from './pages/AdminDashboard';
 
@@ -20,7 +18,6 @@ const App = () => {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    // Listen for authentication changes
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
     });
@@ -30,7 +27,7 @@ const App = () => {
   return (
     <Router>
       <div className="flex flex-col min-h-screen w-full overflow-hidden">
-       
+        {/* Pass the user state to the Navbar */}
         <Navbar user={user} />
 
         <main className="flex-grow">
@@ -40,6 +37,9 @@ const App = () => {
             <Route path="/login" element={<AuthPage />} />
             
             {/* If user is already logged in, redirect them away from the login page */}
+            
+            {/*  If user is already logged in, redirect them away from the login page */}
+
             <Route 
               path="/login" 
               element={!user ? <AuthPage /> : <Navigate to="/" replace />} 
@@ -49,9 +49,7 @@ const App = () => {
             <Route path="/about" element={<About/>}/>
             <Route path="/feedback" element={<Feedback/>}/>
 
-
             <Route path="/scan" element={<CameraCapture />} /> {/*(member 2) Added route for the AI Camera Scanner. Accessible via /scan URL */}
-
             {/* Protected Route: Redirects to login if not authenticated */}
             <Route 
               path="/scan" 
@@ -65,6 +63,8 @@ const App = () => {
             {/* Access this by going to http://localhost:5173/admin */}
             <Route path="/admin" element={<AdminDashboard />} />
 
+
+            <Route path="/admin/feedback" element={<AdminFeedback />} />
 
           </Routes>
         </main>
