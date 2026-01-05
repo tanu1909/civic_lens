@@ -1,4 +1,3 @@
-// ✅ ADD THIS
 import { supabase } from '../supabaseClient';
 
 export const fetchAllReports = async () => {

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+// FIXED: Added Navigate to imports
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./services/firebase.js"; 
@@ -11,60 +12,52 @@ import About from './pages/About.jsx';
 import Feedback from './pages/Feedback.jsx';
 import CameraCapture from './components/CameraCapture';
 import AdminFeedback from './pages/AdminFeedback.jsx';
-
-import AdminDashboard from './pages/AdminDashboard';
+import AdminDashboard from './pages/AdminDashboard'; 
 
 const App = () => {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      setLoading(false);
     });
     return () => unsubscribe(); 
   }, []);
 
+  if (loading) {
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+  }
+
   return (
     <Router>
       <div className="flex flex-col min-h-screen w-full overflow-hidden">
-        {/* Pass the user state to the Navbar */}
+        
         <Navbar user={user} />
 
         <main className="flex-grow">
           <Routes>
             <Route path="/" element={<Home />} />
 
-            <Route path="/login" element={<AuthPage />} />
-            
-            {/* If user is already logged in, redirect them away from the login page */}
-            
-            {/*  If user is already logged in, redirect them away from the login page */}
-
+            {/* FIXED: Single Login Route */}
             <Route 
               path="/login" 
               element={!user ? <AuthPage /> : <Navigate to="/" replace />} 
             />
 
-
             <Route path="/about" element={<About/>}/>
             <Route path="/feedback" element={<Feedback/>}/>
 
-            <Route path="/scan" element={<CameraCapture />} /> {/*(member 2) Added route for the AI Camera Scanner. Accessible via /scan URL */}
-            {/* Protected Route: Redirects to login if not authenticated */}
+            {/* FIXED: Single Scan Route (Protected) */}
             <Route 
               path="/scan" 
               element={user ? <CameraCapture user={user} /> : <Navigate to="/login" state={{ from: '/scan' }} replace />} 
             />
 
-            {/* Existing Admin Route */}
+            {/* FIXED: Single Admin Routes */}
             <Route path="/admin/feedback" element={<AdminFeedback />} />
-
-            {/* --- YOUR NEW ROUTE --- */}
-            {/* Access this by going to http://localhost:5173/admin */}
             <Route path="/admin" element={<AdminDashboard />} />
-
-
-            <Route path="/admin/feedback" element={<AdminFeedback />} />
 
           </Routes>
         </main>
