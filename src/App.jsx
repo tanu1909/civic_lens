@@ -1,54 +1,67 @@
-import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "./services/firebase.js"; 
+import { auth } from "./services/firebase";
 
-import Home from './pages/Home';
-import Navbar from './components/Navbar';
-import FooterCard from './components/FooterCard';
-import AuthPage from './pages/AuthPage';
-import About from './pages/About.jsx';
-import Feedback from './pages/Feedback.jsx';
+// Components
+import Navbar from "./components/Navbar";
+import FooterCard from "./components/FooterCard";
+import CameraCapture from "./components/CameraCapture";
 
-import CameraCapture from './components/CameraCapture';// ai scanner imported(member 2)
-import UserHistory from './pages/UserHistory';//(by mem-2)
-import AdminFeedback from './pages/AdminFeedback.jsx';
+// Pages
+import Home from "./pages/Home";
+import AuthPage from "./pages/AuthPage";
+import About from "./pages/About";
+import Feedback from "./pages/Feedback";
+import UserHistory from "./pages/UserHistory";
+import AdminFeedback from "./pages/AdminFeedback";
 
 const App = () => {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      setLoading(false);
     });
-    return () => unsubscribe(); 
+
+    return unsubscribe;
   }, []);
+
+  if (loading) {
+    return <div className="text-center mt-10">Loading...</div>;
+  }
 
   return (
     <Router>
-      <div className="flex flex-col min-h-screen w-full overflow-hidden">
-        {/* Pass the user state to the Navbar */}
+      <div className="flex flex-col min-h-screen">
         <Navbar user={user} />
 
         <main className="flex-grow">
           <Routes>
             <Route path="/" element={<Home />} />
-            
-            {/*  If user is already logged in, redirect them away from the login page */}
-            <Route 
-              path="/login" 
-              element={!user ? <AuthPage /> : <Navigate to="/" replace />} 
+
+            <Route
+              path="/login"
+              element={!user ? <AuthPage /> : <Navigate to="/" replace />}
             />
 
-            <Route path="/about" element={<About/>}/>
-            <Route path="/feedback" element={<Feedback/>}/>
+            <Route path="/about" element={<About />} />
+            <Route path="/feedback" element={<Feedback />} />
 
-            {/* Protected Route: Redirects to login if not authenticated */}
-            <Route 
-              path="/scan" 
-              element={user ? <CameraCapture user={user} /> : <Navigate to="/login" state={{ from: '/scan' }} replace />} 
+            <Route
+              path="/scan"
+              element={
+                user ? (
+                  <CameraCapture user={user} />
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              }
             />
-            <Route path="/history" element={<UserHistory />} />{/*by mem-2 */}
+            {/* Added from merge conflict resolution */}
+            <Route path="/history" element={<UserHistory />} />
 
             <Route path="/admin/feedback" element={<AdminFeedback />} />
           </Routes>
