@@ -15,28 +15,33 @@ const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });//model of
 
 
 
+//* * GEMINI PROMPT FOR SAFETY & INFRASTRUCTURE * */
+
 const prompt = `
-  Analyze this image for civic issues (potholes, garbage, broken streetlights, waterlogging, etc.).
+  Analyze this image for civic infrastructure issues and public safety hazards.
   
-  CRITICAL INSTRUCTION: First, check the image quality.
-  
-  1. IF THE IMAGE IS BLURRY, TOO DARK, OR UNCLEAR:
-     - Set 'issue' to "Image Unclear".
-     - Set 'description' to "The image is too blurry or dark to analyze. Please retake a clear photo."
-     - Set 'severity' to 0.
-  
-  2. IF THE IMAGE IS CLEAR BUT HAS NO ISSUES:
-     - Set 'issue' to "No Hazard Detected".
-     - Set 'description' to "The area appears safe with no visible civic infrastructure issues."
-     - Set 'severity' to 0.
+  CRITICAL INSTRUCTION: First, check image quality.
+  1. IF BLURRY/BLACK SCREEN: Return { "issue": "Image Unclear", "severity": 0, "description": "Image is too blurry or dark to analyze." }
 
-  3. IF A VALID ISSUE IS FOUND:
-     - Identify the specific issue (e.g., "Deep Pothole", "Garbage Dump").
-     - Describe it in 2 sentences.
-     - Rate severity 1-10.
-
-  Output MUST be valid JSON:
-  { "issue": "String", "description": "String", "severity": Number }
+  2. SEARCH FOR THESE SPECIFIC HAZARDS:
+  
+  - **Street Light Issues:** Broken poles, hanging wires, or non-functional lights (if night time).
+  - **Road Hazards:** Deep potholes, open manholes, waterlogging, dangerous cracks.
+  - **Sanitation:** Garbage dumps, overflowing sewage.
+  - **Public Safety (Women/Pedestrians):** - "Dark/Unlit Street" (if the image is clear but shows a street with no working lights at night).
+     - "Desolate/Unsafe Route" (isolated areas with broken infrastructure that look dangerous).
+  
+  3. OUTPUT FORMAT (JSON ONLY):
+  { 
+    "issue": "Short Title (e.g. Broken Streetlight, Dark Street, Pothole)", 
+    "description": "2 sentence explanation of the hazard and why it is unsafe.", 
+    "severity": Number (1-10)
+  }
+  
+  **Severity Guide:**
+  - 8-10: Immediate danger (Open manhole, Live wire, Total darkness in alley).
+  - 4-7: Moderate danger (Pothole, Garbage pile).
+  - 1-3: Minor issue (Faded road markings).
 `;
   
     const result = await model.generateContent([prompt, imagePart]);//result in json
