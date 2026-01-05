@@ -7,6 +7,7 @@ import { auth } from "./services/firebase";
 import Navbar from "./components/Navbar";
 import FooterCard from "./components/FooterCard";
 import CameraCapture from "./components/CameraCapture";
+import MapPage from "./components/MapPage";
 
 // Pages
 import Home from "./pages/Home";
@@ -26,7 +27,7 @@ const App = () => {
       setLoading(false);
     });
 
-    return unsubscribe;
+    return () => unsubscribe();
   }, []);
 
   if (loading) {
@@ -53,17 +54,18 @@ const App = () => {
             <Route
               path="/scan"
               element={
-                user ? (
-                  <CameraCapture user={user} />
-                ) : (
-                  <Navigate to="/login" replace />
-                )
+                user ? <CameraCapture user={user} /> : <Navigate to="/login" replace />
               }
             />
-            {/* Added from merge conflict resolution */}
+
             <Route path="/history" element={<UserHistory />} />
 
             <Route path="/admin/feedback" element={<AdminFeedback />} />
+
+            <Route
+              path="/map"
+              element={user ? <MapPage /> : <Navigate to="/login" replace />}
+            />
           </Routes>
         </main>
 
