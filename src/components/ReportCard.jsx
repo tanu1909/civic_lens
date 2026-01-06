@@ -4,42 +4,42 @@ import { MapPin, Calendar, AlertTriangle, CheckCircle, Clock, Check, X } from 'l
 const ReportCard = ({ report, onDelete }) => {
     const [showProof, setShowProof] = useState(false);
 
-    // --- 1. SAFETY CLEANING LOGIC ---
+   
     let loc = { lat: 0, lng: 0, address: "Location unavailable" };
     let hasValidGPS = false;
     
     try {
-        // Handle if location is just missing
+      
         if (report.location) {
-            // Handle if database saved it as a JSON String "{...}" instead of an Object
+          
             let rawLoc = report.location;
             if (typeof rawLoc === 'string') {
                 try {
                     rawLoc = JSON.parse(rawLoc);
                 } catch(e) {
-                    // If it's just a plain string like "Lucknow", use it as address
+                   
                     rawLoc = { address: report.location, lat: 0, lng: 0 };
                 }
             }
 
-            // Force convert Lat/Lng to Numbers (Fixes the "26.8" string issue)
+            
             const safeLat = parseFloat(rawLoc.lat);
             const safeLng = parseFloat(rawLoc.lng);
 
-            // Update our local variables
+            
             loc = {
                 lat: isNaN(safeLat) ? 0 : safeLat,
                 lng: isNaN(safeLng) ? 0 : safeLng,
                 address: rawLoc.address || "Location unavailable"
             };
 
-            // Valid GPS means we have numbers that are NOT zero
+            
             hasValidGPS = loc.lat !== 0 && loc.lng !== 0;
         }
     } catch (err) {
         console.error("Location parsing error:", err);
     }
-    // --------------------------------
+    
 
     const getStatusStyle = (status) => {
         switch(status?.toLowerCase()){
@@ -52,7 +52,7 @@ const ReportCard = ({ report, onDelete }) => {
 
     const statusStyle = getStatusStyle(report.status);
     
-    // Safety check for date
+    
     const dateObj = report.timestamp ? new Date(report.timestamp) : new Date(report.created_at);
     const date = isNaN(dateObj.getTime()) ? "Date N/A" : dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 

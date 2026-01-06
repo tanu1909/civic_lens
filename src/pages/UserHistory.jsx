@@ -9,7 +9,9 @@ const UserHistory = () => {
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('All'); 
-    const [showToast, setShowToast] = useState(false);
+    
+    // Toast State for Delete Confirmation
+    const [showToast, setShowToast] = useState(false); 
 
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -31,6 +33,13 @@ const UserHistory = () => {
         return () => unsubscribe();
     }, []);
 
+    // --- NEW: Helper Function to Count Reports ---
+    const getCount = (status) => {
+        if (status === 'All') return reports.length;
+        return reports.filter(r => (r.status || 'Pending').toLowerCase() === status.toLowerCase()).length;
+    };
+    // ---------------------------------------------
+
     const filteredReports = filter === 'All' 
         ? reports 
         : reports.filter(r => (r.status || 'Pending').toLowerCase() === filter.toLowerCase());
@@ -38,30 +47,24 @@ const UserHistory = () => {
     const handleDelete = async (reportId) => {
         if (!window.confirm("Are you sure you want to delete this report?")) return;
 
-        // 1. Find the report to delete (so we can access its image URL)
         const reportToDelete = reports.find(r => r.id === reportId);
-
-        // 2. Optimistic Update: Remove it from the screen INSTANTLY
-        // This makes the app feel incredibly fast.
-        const previousReports = [...reports]; // Backup in case of error
+        
+        // Optimistic Update
+        const previousReports = [...reports];
         setReports(reports.filter(r => r.id !== reportId));
 
         try {
-            // --- STEP A: Delete Image from 'images' Bucket ---
+            
             if (reportToDelete && reportToDelete.imageUrl) {
-                // Extract filename (e.g., "172345-car.jpg") from the full URL
                 const fileName = reportToDelete.imageUrl.split('/').pop();
-
                 const { error: storageError } = await supabase.storage
-                    .from('images') // <--- CONFIRMED: This matches your bucket name
+                    .from('images') 
                     .remove([fileName]);
-
-                if (storageError) {
-                    console.warn("Could not delete image file (might already be gone):", storageError);
-                }
+                
+                if (storageError) console.warn("Image delete warning:", storageError);
             }
 
-            // --- STEP B: Delete Record from Database ---
+            
             const { error } = await supabase
                 .from('reports')
                 .delete()
@@ -69,15 +72,13 @@ const UserHistory = () => {
 
             if (error) throw error;
 
-            // --- STEP C: Show Success Toast ---
+        
             setShowToast(true);
-            setTimeout(() => setShowToast(false), 3000); // Hide after 3 seconds
+            setTimeout(() => setShowToast(false), 3000);
 
         } catch (error) {
             console.error("Delete failed:", error);
-            alert("Failed to delete. Please check your connection.");
-            
-            // Revert changes if it failed (Put the card back)
+            alert("Failed to delete. Please check connection.");
             setReports(previousReports);
         }
     };
@@ -103,20 +104,23 @@ const UserHistory = () => {
                         </Link>
                     </div>
 
-                    {/* Filter Buttons */}
+                    {/* Filter Buttons with COUNTS */}
                     {!loading && reports.length > 0 && (
                         <div className="flex gap-4 mt-6 overflow-x-auto pb-2">
                             <button onClick={() => setFilter('All')} className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${filter === 'All' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600'}`}>
-                                All Reports
+                                All Reports ({getCount('All')})
                             </button>
+                            
                             <button onClick={() => setFilter('Pending')} className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${filter === 'Pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-white text-gray-600'}`}>
-                                Pending ⏳
+                                Pending ({getCount('Pending')}) ⏳
                             </button>
+                            
                             <button onClick={() => setFilter('In Progress')} className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors whitespace-nowrap ${filter === 'In Progress' ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-white text-gray-600 hover:bg-blue-50'}`}>
-                                In Progress 🚧
-                            </button>                            
+                                In Progress ({getCount('In Progress')}) 🚧
+                            </button>                             
+                            
                             <button onClick={() => setFilter('Resolved')} className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${filter === 'Resolved' ? 'bg-green-100 text-green-800' : 'bg-white text-gray-600'}`}>
-                                Resolved ✅
+                                Resolved ({getCount('Resolved')}) ✅
                             </button>
                         </div>
                     )}
@@ -136,7 +140,7 @@ const UserHistory = () => {
                         <h3 className="text-lg font-bold text-gray-900">No reports found</h3>
                         {filter === 'All' && (
                             <Link to="/scan" className="text-blue-600 font-semibold hover:underline mt-2 block">
-                                Start Scanning Now &rarr;
+                                Start Scanning Now →
                             </Link>
                         )}
                     </div>
@@ -148,13 +152,11 @@ const UserHistory = () => {
                     </div>
                 )}
             </div>
-            {/* ... End of Main Content ... */}
 
-            {/* --- PASTE THIS TOAST SECTION HERE --- */}
+            {/* Success Toast */}
             {showToast && (
                 <div className="fixed bottom-6 right-6 bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 animate-bounce-up z-50">
                     <div className="bg-red-500 rounded-full p-1">
-                        {/* Trash Icon */}
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="3 6 5 6 21 6"></polyline>
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -163,7 +165,6 @@ const UserHistory = () => {
                     <span className="font-medium">Report Deleted Successfully</span>
                 </div>
             )}
-            {/* ------------------------------------- */}
         </div>
     );
 };

@@ -1,4 +1,4 @@
-import React, { useState, useRef,useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ImageAnalysis } from '../services/gemini';
 import { uploadImageToStorage, saveReport } from '../services/reportService';
 import { auth } from '../services/firebase';
@@ -26,11 +26,9 @@ const CameraCapture = () => {
     // LOCATION STATES
     const [locationMode, setLocationMode] = useState('auto'); 
     const [manualAddress, setManualAddress] = useState("");
-
-    const [suggestions, setSuggestions] = useState([]); // Stores search results
+    const [suggestions, setSuggestions] = useState([]); 
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [pincode, setPincode] = useState("");
- 
     const [detectedAddress, setDetectedAddress] = useState("Fetching location...");
 
     // --- HANDLE IMAGE UPLOAD ---
@@ -39,16 +37,14 @@ const CameraCapture = () => {
         if (!file) return;
 
         isAnalysisActive.current = true;
-
         const options = { maxSizeMB: 0.5, maxWidthOrHeight: 1280, useWebWorker: true };
+        
         setLoadingText("Analyzing...");
         setLoading(true);
         setReport(null); 
 
         try {
             const compressedFile = await imageCompression(file, options);
-            
-            //  if user cancelled while compressing
             if (!isAnalysisActive.current) return;
 
             setImage(URL.createObjectURL(compressedFile));
@@ -57,13 +53,10 @@ const CameraCapture = () => {
             // AI Analysis
             const data = await ImageAnalysis(compressedFile);
             
-            //IF USER CLICKED RETAKE ---
             if (!isAnalysisActive.current) {
-                console.log("Analysis ignored because user clicked retake.");
                 setLoading(false);
                 return; 
             }
-            // ------------------------------------------------
 
             if (!data || !data.issue || data.issue === "Unclear") {
                 alert("⚠️ Image Unclear. Please try again.");
@@ -83,40 +76,31 @@ const CameraCapture = () => {
         setLoading(false);
     };
 
-    // --- HANDLE RETAKE (it RESETS EVERYTHING) ---
+    // --- HANDLE RETAKE ---
     const handleRetake = () => {
-        
         isAnalysisActive.current = false;
-
         setImage(null);
         setImageFile(null);
-        setReport(null);         
+        setReport(null);        
         setManualSeverity(0);
         setLocationMode('auto');
         setManualAddress("");
         setLoading(false);       
-        
-        if (fileInputRef.current) {
-            fileInputRef.current.value = "";
-        }
+        if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
-    // --- SMART ADDRESS SEARCH FUNCTION ---
-// --- 1. HANDLE TYPING ONLY (Update text immediately) ---
+    // --- ADDRESS SEARCH FUNCTIONS ---
     const handleManualInputChange = (e) => {
         setManualAddress(e.target.value);
+        setLocationMode('manual'); // Reset to manual if typing
     };
 
-    // --- 2. DEBOUNCED SEARCH EFFECT (Wait 1s before calling API) ---
     useEffect(() => {
-        // Stop if text is too short or empty
         if (!manualAddress || manualAddress.length < 3) {
             setSuggestions([]);
             setShowSuggestions(false);
             return;
         }
-
-        // Set a timer: "Call API in 1000ms"
         const delaySearch = setTimeout(async () => {
             try {
                 const response = await fetch(
@@ -128,28 +112,19 @@ const CameraCapture = () => {
             } catch (error) {
                 console.error("Search failed:", error);
             }
-        }, 1000); // 1000ms = 1 second delay
-
-        // Cleanup: If user types again before 1s, cancel the previous timer
+        }, 1000);
         return () => clearTimeout(delaySearch);
+    }, [manualAddress]);
 
-    }, [manualAddress]); // Run this whenever manualAddress changes
-
-// --- WHEN USER CLICKS A SUGGESTION ---
     const selectSuggestion = (item) => {
-     // 1. Set the visible text
         setManualAddress(item.display_name);
-    
-        // 2. Hide the list
         setShowSuggestions(false);
         if (item.address && item.address.postcode) {
             setPincode(item.address.postcode);
         } else {
-            setPincode(""); // Clear it if not found so user can type
+            setPincode("");
         }
     
-        // 3. MAGIC: We now have the EXACT Lat/Lng from the API!
-        // We update the report state immediately so we don't need to look it up later.
         setReport(prev => ({
             ...prev,
             location: {
@@ -158,44 +133,33 @@ const CameraCapture = () => {
                 address: item.display_name
             }
         }));
-    
-        // 4. Mark location as successful (Green Checkmark UI)
         setLocationMode('manual_success'); 
     };
-    // --- MISSING DETECT LOCATION FUNCTION ---
+
+    // --- DETECT LOCATION ---
     const detectLocation = () => {
-        // 1. Check browser support
         if (!("geolocation" in navigator)) {
             setLocationMode('manual');
             return;
         }
-        
         setLocationMode('detecting');
         
-        // 2. Start GPS Scan
         navigator.geolocation.getCurrentPosition(
             async (position) => {
-                // Success! We have coordinates.
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
-
-                // 3. Immediately fetch the text address
                 const address = await getAddressFromCoordinates(lat, lng);
-                
-                // 4. Save it to state and update UI
                 setDetectedAddress(address);
                 setLocationMode('success');
             },
             (error) => {
                 console.warn("GPS Error:", error);
-                // Simple error handling: switch to manual
                 setLocationMode('manual');
             },
             { enableHighAccuracy: true, timeout: 10000 }
         );
     };
 
-    // --- NEW HELPER: Convert Lat/Lng to Text Address ---
     const getAddressFromCoordinates = async (lat, lng) => {
         try {
             const response = await fetch(
@@ -204,15 +168,14 @@ const CameraCapture = () => {
             const data = await response.json();
             return data.display_name || "GPS Location Captured";
         } catch (error) {
-            console.error("Reverse Geocoding failed:", error);
-            return "GPS Location Captured"; // Fallback if API fails
+            return "GPS Location Captured";
         }
     };
 
-    // --- HANDLE SUBMIT ---
+    // --- HANDLE SUBMIT  ---
     const handleSubmit = async () => {
+        // 1. Validation Checks
         if (!auth.currentUser) return alert("Please Login!");
-        
         if (manualSeverity < 4) return alert("Severity must be 4+ to report.");
 
         const aiScore = report?.severity || 0;
@@ -227,101 +190,88 @@ const CameraCapture = () => {
 
         if (locationMode === 'manual') {
             if (manualAddress.length < 3) return alert("Please enter a valid address");
-            if (pincode.length < 6) return alert("Please enter a valid 6-digit Pincode");
-
-    
+            // Optional: You can make pincode strictly required or optional here
+             if (pincode.length < 6) return alert("Please enter a valid 6-digit Pincode");
         }
 
         setIsSubmitting(true);
         setLoadingText("Submitting...");
 
         try {
+            // 2. Upload Image
             const imageUrl = await uploadImageToStorage(imageFile);
             
-// ... inside handleSubmit ...
+            // 3. Smart Location Logic
+            let finalLocation = null;
+            let locationPrecision = 'manual_text';
 
-        // --- SMART LOCATION LOGIC ---
-        let finalLocation = null;
-        let locationPrecision = 'manual_text'; // Default to low precision
-
-        // CASE 1: Manual Text Only (User typed but didn't pick suggestion)
-        if (locationMode === 'manual') {
-            const proceed = window.confirm(
-                "⚠️ GPS Warning\n\nWe cannot verify the exact location coordinates for this address.\n" +
-                "The validation check will be disabled for this report.\n\n" +
-                "Proceed anyway?"
-            );
-            if (!proceed) { setIsSubmitting(false); return; }
-
-            finalLocation = { 
-                lat: 0, 
-                lng: 0, 
-                address: manualAddress + (pincode ? `, ${pincode}` : "") 
-            };
-            locationPrecision = 'manual_text'; // Flag for Admin to skip check
-        }
-        
-        // CASE 2: Valid Suggestion Selected (High Quality)
-        else if (locationMode === 'manual_success') {
-             finalLocation = {
-                lat: report.location.lat, 
-                lng: report.location.lng,
-                address: manualAddress + (pincode ? `, ${pincode}` : "") 
-            };
-            locationPrecision = 'precise'; // Admin should enforce check
-        }
-
-        // CASE 3: GPS Auto-Detect (High Quality)
-        // ... inside handleSubmit ...
-        else {
-             try {
-                 // 1. Ask for GPS
-                 const position = await new Promise((resolve, reject) => 
-                    navigator.geolocation.getCurrentPosition(
-                        resolve, 
-                        reject,
-                        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                    )
+            // CASE A: Manual Text Only
+            if (locationMode === 'manual') {
+                const proceed = window.confirm(
+                    "⚠️ GPS Warning\n\nWe cannot verify the exact GPS coordinates for this address.\n" +
+                    "The admin validation check will be disabled for this report.\n\n" +
+                    "Proceed anyway?"
                 );
-
-                // --- NEW: CHECK ACCURACY ---
-                // accuracy is measured in meters.
-                // If accuracy is worse than 2000 meters (2km), it's definitely an IP address guess.
-                const accuracy = position.coords.accuracy;
-                console.log(`GPS Accuracy: ${accuracy} meters`);
-
-                if (accuracy > 2000) {
-                    alert(`⚠️ GPS Signal Weak (Accuracy: ±${Math.round(accuracy)}m).\n\nYour device is using a rough location (likely IP-based).\n\nPlease search for your address manually.`);
-                    setIsSubmitting(false);
-                    setLocationMode('manual'); // Switch to manual mode immediately
-                    return;
-                }
-                // ---------------------------
-                
-                // If accuracy is good (e.g., on a phone), continue as normal
-                const realAddress = await getAddressFromCoordinates(
-                    position.coords.latitude, 
-                    position.coords.longitude
-                );
+                if (!proceed) { setIsSubmitting(false); return; }
 
                 finalLocation = { 
-                    lat: position.coords.latitude, 
-                    lng: position.coords.longitude, 
-                    address: realAddress 
+                    lat: 0, 
+                    lng: 0, 
+                    address: manualAddress + (pincode ? `, ${pincode}` : "") 
                 };
-                
-                // Since accuracy is good, we trust this location
-                locationPrecision = 'precise';
-
-            } catch (gpsError) {
-                console.error("GPS Error:", gpsError);
-                alert("GPS Failed. Please enter location manually.");
-                setIsSubmitting(false);
-                setLocationMode('manual');
-                return;
+                locationPrecision = 'manual_text';
             }
-        }
+            
+            // CASE B: Valid Suggestion (Green Check)
+            else if (locationMode === 'manual_success') {
+                 finalLocation = {
+                    lat: report.location.lat, 
+                    lng: report.location.lng,
+                    address: manualAddress + (pincode ? `, ${pincode}` : "") 
+                };
+                locationPrecision = 'precise';
+            }
 
+            // CASE C: GPS Auto-Detect
+            else {
+                 try {
+                     const position = await new Promise((resolve, reject) => 
+                        navigator.geolocation.getCurrentPosition(
+                            resolve, reject, 
+                            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                        )
+                    );
+                    
+                    // Accuracy Check
+                    const accuracy = position.coords.accuracy;
+                    if (accuracy > 2000) {
+                        alert(`⚠️ GPS Signal Weak (Accuracy: ±${Math.round(accuracy)}m).\n\nYour device is using a rough location (likely IP-based).\n\nPlease search for your address manually.`);
+                        setIsSubmitting(false);
+                        setLocationMode('manual');
+                        return;
+                    }
+
+                    const realAddress = await getAddressFromCoordinates(
+                        position.coords.latitude, 
+                        position.coords.longitude
+                    );
+
+                    finalLocation = { 
+                        lat: position.coords.latitude, 
+                        lng: position.coords.longitude, 
+                        address: realAddress 
+                    };
+                    locationPrecision = 'precise';
+
+                } catch (gpsError) {
+                    alert("GPS Failed. Please enter location manually.");
+                    setIsSubmitting(false);
+                    setLocationMode('manual');
+                    return;
+                }
+            }
+
+            // 4. Save to Database
             await saveReport({
                 userId: auth.currentUser.uid,
                 imageUrl,
@@ -331,7 +281,8 @@ const CameraCapture = () => {
                 location: finalLocation,
                 location_precision: locationPrecision,
                 status: 'Pending',
-                isSuspicious: mismatch > 4 
+                isSuspicious: mismatch > 4,
+                timestamp: new Date().toISOString()
             });
 
             setShowToast(true);
@@ -463,18 +414,14 @@ const CameraCapture = () => {
                                 {locationMode === 'success' && (
                                     <div className="p-3 bg-green-50 rounded-lg border border-green-200 shadow-sm flex items-center justify-between">
                                         <div className="overflow-hidden">
-                                            {/* Header */}
                                             <div className="flex items-center gap-2 text-green-700 mb-0.5">
                                                 <CheckCircle size={14} />
                                                 <span className="text-xs font-bold uppercase">GPS Locked</span>
                                             </div>
-                                            
-                                            {/* THE NEW PART: Showing the address text */}
                                             <p className="text-xs text-gray-600 font-medium truncate max-w-[200px]" title={detectedAddress}>
                                                 {detectedAddress}
                                             </p>
                                         </div>
-
                                         <button 
                                             onClick={() => setLocationMode('manual')}
                                             className="text-xs text-blue-600 underline shrink-0 font-medium px-2 py-1 hover:bg-blue-50 rounded"
@@ -484,11 +431,9 @@ const CameraCapture = () => {
                                     </div>
                                 )}
 
-                                {/* 3. MANUAL INPUT STATE (Redesigned with Pincode) */}
+                                {/* 3. MANUAL INPUT STATE */}
                                 {locationMode === 'manual' && (
                                     <div className="relative animate-fade-in space-y-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
-                                        
-                                        {/* Address Search */}
                                         <div className="relative">
                                             <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Address / Landmark</label>
                                             <div className="relative">
@@ -523,7 +468,7 @@ const CameraCapture = () => {
                                                 )}
                                             </div>
                                         </div>
-
+                                        
                                         {/* Pincode Field */}
                                         <div>
                                             <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Pincode</label>
@@ -534,7 +479,7 @@ const CameraCapture = () => {
                                                     maxLength="6"
                                                     value={pincode}
                                                     onChange={(e) => {
-                                                        const val = e.target.value.replace(/\D/g, ''); // Only numbers
+                                                        const val = e.target.value.replace(/\D/g, ''); 
                                                         if (val.length <= 6) setPincode(val);
                                                     }}
                                                     placeholder="226001"
