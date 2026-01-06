@@ -11,21 +11,97 @@ const AdminDashboard = () => {
     }, []);
 
     const loadReports = async () => {
-        const data = await fetchAllReports();
-        setReports(data);
-        setLoading(false);
+        try {
+            const data = await fetchAllReports();
+            // Sort reports: High Severity first
+            const sortedData = (data || []).sort((a, b) => (b.severity || 0) - (a.severity || 0));
+            setReports(sortedData);
+        } catch (e) {
+            console.error("Failed to load reports", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // --- 🛡️ SAFETY SHIELD: Prevents White Screen Crash ---
+    const renderLocationSafe = (locationData) => {
+        try {
+            if (!locationData) return "Unknown Location";
+            let parsed = locationData;
+            
+            if (typeof locationData === 'string') {
+                if (!locationData.includes('{')) return "GPS Detected"; 
+                parsed = JSON.parse(locationData);
+            }
+
+            if (parsed && parsed.address) {
+                return parsed.address.length > 20 
+                    ? parsed.address.substring(0, 20) + "..." 
+                    : parsed.address;
+            }
+
+            if (parsed && parsed.lat) {
+                return `GPS: ${parsed.lat.toFixed(4)}, ${parsed.lng.toFixed(4)}`;
+            }
+            return "Location Data Missing";
+        } catch (error) {
+            return "Data Error"; 
+        }
     };
 
     const handleStatusChange = async (id, newStatus) => {
-        setReports(reports.map(r => r.id === id ? { ...r, status: newStatus } : r));
-        await updateReportStatus(id, newStatus);
+        updateLocalReportStatus(id, newStatus);
+    };
+
+    const updateLocalReportStatus = async (id, newStatus) => {
+        const now = new Date().toISOString(); 
+        
+        setReports(prevReports => prevReports.map(r => {
+            if (r.id == id) {
+                let updatedResolvedAt = r.resolvedAt; 
+                
+                if (newStatus === 'Resolved') {
+                    updatedResolvedAt = now;
+                } else if (r.status === 'Resolved' && newStatus !== 'Resolved') {
+                    updatedResolvedAt = null;
+                }
+                
+                return { ...r, status: newStatus, resolvedAt: updatedResolvedAt };
+            }
+            return r;
+        }));
+        
+        await updateReportStatus(id, newStatus, now);
+    };
+
+    // 🔥 DATE FORMATTER
+    const formatDate = (dateString) => {
+        if (!dateString) return <span className="text-gray-400 font-normal">-</span>;
+        
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return <span className="text-red-400">Invalid Date</span>;
+
+            return (
+                <div className="flex flex-col">
+                    <span className="font-bold text-slate-700">
+                        {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                    <span className="text-xs text-slate-500">
+                        {date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                    </span>
+                </div>
+            );
+        } catch (e) {
+            return "-";
+        }
     };
 
     if (loading) return <div className="p-10 text-center text-xl"> 🔄 Loading Government Portal...</div>;
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
-            <header className="mb-8 flex justify-between items-center">
+        <div className="min-h-screen bg-gray-50 p-6 relative">
+             <header className="mb-8 flex justify-between items-center">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-800"> 🏛️ CivicLens Admin Portal</h1>
                     <p className="text-slate-500">Government Dashboard for Issue Tracking</p>
@@ -35,14 +111,11 @@ const AdminDashboard = () => {
                 </div>
             </header>
 
-            {/*  MAP SECTION (Member 2's Work)  */}
             <div className="mb-8 bg-white p-4 rounded-xl shadow-md">
                 <h2 className="text-xl font-bold mb-4 text-slate-700"> 📍 Live Incident Map</h2>
-                {/* We pass the reports data to the map */}
                 <MapView reports={reports} />
             </div>
 
-            {/* --- REPORTS TABLE SECTION --- */}
             <div className="bg-white rounded-xl shadow-md overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
@@ -50,72 +123,46 @@ const AdminDashboard = () => {
                             <tr className="bg-slate-800 text-white">
                                 <th className="p-4">Evidence</th>
                                 <th className="p-4">Issue Details</th>
+                                <th className="p-4">Reported On</th>
+                                <th className="p-4">Resolved On</th>
                                 <th className="p-4">Location</th>
                                 <th className="p-4">Severity</th>
-                                <th className="p-4">AI Verification</th>
                                 <th className="p-4">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             {reports.map((report) => (
-                                <tr
-                                    key={report.id}
-                                    className={`border-b hover:bg-gray-50 transition-colors
-                                    ${report.isSuspicious ? 'bg-red-50 border-l-4 border-red-500' : ''}
-                                    `}
-                                >
-                                    {/* Image */}
+                                <tr key={report.id} className={`border-b hover:bg-gray-50 transition-colors ${report.isSuspicious ? 'bg-red-50 border-l-4 border-red-500' : ''}`}>
                                     <td className="p-4">
                                         <a href={report.imageUrl} target="_blank" rel="noreferrer">
-                                            <img
-                                                src={report.imageUrl}
-                                                alt="Evidence"
-                                                className="w-20 h-20 object-cover rounded-lg border border-gray-200 hover:scale-105 transition-transform"
-                                            />
+                                            <img src={report.imageUrl} alt="Evidence" className="w-20 h-20 object-cover rounded-lg border border-gray-200 hover:scale-105 transition-transform" />
                                         </a>
                                     </td>
-
-                                    {/* Details */}
                                     <td className="p-4 max-w-xs">
                                         <p className="font-bold text-slate-800 text-lg">{report.issue || "Report Details"}</p>
                                         <p className="text-sm text-slate-500 mt-1 line-clamp-2">{report.description}</p>
                                         <p className="text-xs text-slate-400 mt-2">ID: {report.id}</p>
                                     </td>
-
-                                    {/* Location */}
-                                    <td className="p-4 text-sm text-slate-600 font-mono">
-                                        {report.location ? report.location : "Unknown"}
+                                    
+                                    {/* 🔥 FIXED: Now checking 'created_at' to match Supabase */}
+                                    <td className="p-4 text-sm text-slate-600 whitespace-nowrap">
+                                        {formatDate(report.created_at || report.timestamp)}
+                                    </td>
+                                    
+                                    <td className="p-4 text-sm whitespace-nowrap bg-blue-50/30 border-l border-blue-100">
+                                        {report.resolvedAt ? formatDate(report.resolvedAt) : <span className="text-gray-400">-</span>}
                                     </td>
 
-                                    {/* Severity Badge */}
+                                    <td className="p-4 text-sm text-slate-600 font-mono">
+                                        {renderLocationSafe(report.location)}
+                                    </td>
+
                                     <td className="p-4">
-                                        <span className={`px-3 py-1 rounded-full text-xs font-bold
-                                        ${report.severity >= 8 ? 'bg-red-100 text-red-700' :
-                                                report.severity >= 5 ? 'bg-orange-100 text-orange-700' :
-                                                    'bg-green-100 text-green-700'}`}>
+                                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${report.severity >= 8 ? 'bg-red-100 text-red-700' : report.severity >= 5 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
                                             {report.severity}/10
                                         </span>
                                     </td>
-
-                                    {/* AI Suspicious Flag */}
-                                    <td className="p-4">
-                                        {report.isSuspicious ? (
-                                            <div className="flex items-center gap-2 text-red-600 bg-red-100 px-3 py-2 rounded-lg">
-                                                <span> ⚠️ </span>
-                                                <div className="text-xs font-bold">
-                                                    FLAGGED<br />
-                                                    <span className="font-normal opacity-75">Spam Check Failed</span>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center gap-2 text-green-600 bg-green-50 px-3 py-2 rounded-lg border border-green-100">
-                                                <span> ✅ </span>
-                                                <span className="text-xs font-bold">Verified</span>
-                                            </div>
-                                        )}
-                                    </td>
-
-                                    {/* Status Dropdown */}
+                                    
                                     <td className="p-4">
                                         <select
                                             value={report.status}
@@ -134,12 +181,7 @@ const AdminDashboard = () => {
                             ))}
                         </tbody>
                     </table>
-
-                    {reports.length === 0 && (
-                        <div className="p-10 text-center text-slate-400">
-                            No reports found. Good job! 🎉
-                        </div>
-                    )}
+                    {reports.length === 0 && <div className="p-10 text-center text-slate-400">No reports found.</div>}
                 </div>
             </div>
         </div>
