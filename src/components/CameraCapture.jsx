@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef,useEffect } from 'react';
 import { ImageAnalysis } from '../services/gemini';
 import { uploadImageToStorage, saveReport } from '../services/reportService';
 import { auth } from '../services/firebase';
@@ -26,6 +26,12 @@ const CameraCapture = () => {
     // LOCATION STATES
     const [locationMode, setLocationMode] = useState('auto'); 
     const [manualAddress, setManualAddress] = useState("");
+
+    const [suggestions, setSuggestions] = useState([]); // Stores search results
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [pincode, setPincode] = useState("");
+ 
+    const [detectedAddress, setDetectedAddress] = useState("Fetching location...");
 
     // --- HANDLE IMAGE UPLOAD ---
     const handleUpload = async (e) => {
@@ -95,24 +101,112 @@ const CameraCapture = () => {
         }
     };
 
-    // --- LOCATION FUNCTION ---
+    // --- SMART ADDRESS SEARCH FUNCTION ---
+// --- 1. HANDLE TYPING ONLY (Update text immediately) ---
+    const handleManualInputChange = (e) => {
+        setManualAddress(e.target.value);
+    };
+
+    // --- 2. DEBOUNCED SEARCH EFFECT (Wait 1s before calling API) ---
+    useEffect(() => {
+        // Stop if text is too short or empty
+        if (!manualAddress || manualAddress.length < 3) {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            return;
+        }
+
+        // Set a timer: "Call API in 1000ms"
+        const delaySearch = setTimeout(async () => {
+            try {
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(manualAddress)}&addressdetails=1&limit=5&countrycodes=in`
+                );
+                const data = await response.json();
+                setSuggestions(data);
+                setShowSuggestions(true);
+            } catch (error) {
+                console.error("Search failed:", error);
+            }
+        }, 1000); // 1000ms = 1 second delay
+
+        // Cleanup: If user types again before 1s, cancel the previous timer
+        return () => clearTimeout(delaySearch);
+
+    }, [manualAddress]); // Run this whenever manualAddress changes
+
+// --- WHEN USER CLICKS A SUGGESTION ---
+    const selectSuggestion = (item) => {
+     // 1. Set the visible text
+        setManualAddress(item.display_name);
+    
+        // 2. Hide the list
+        setShowSuggestions(false);
+        if (item.address && item.address.postcode) {
+            setPincode(item.address.postcode);
+        } else {
+            setPincode(""); // Clear it if not found so user can type
+        }
+    
+        // 3. MAGIC: We now have the EXACT Lat/Lng from the API!
+        // We update the report state immediately so we don't need to look it up later.
+        setReport(prev => ({
+            ...prev,
+            location: {
+                lat: parseFloat(item.lat),
+                lng: parseFloat(item.lon),
+                address: item.display_name
+            }
+        }));
+    
+        // 4. Mark location as successful (Green Checkmark UI)
+        setLocationMode('manual_success'); 
+    };
+    // --- MISSING DETECT LOCATION FUNCTION ---
     const detectLocation = () => {
+        // 1. Check browser support
         if (!("geolocation" in navigator)) {
             setLocationMode('manual');
             return;
         }
+        
         setLocationMode('detecting');
         
+        // 2. Start GPS Scan
         navigator.geolocation.getCurrentPosition(
-            (position) => {
+            async (position) => {
+                // Success! We have coordinates.
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+
+                // 3. Immediately fetch the text address
+                const address = await getAddressFromCoordinates(lat, lng);
+                
+                // 4. Save it to state and update UI
+                setDetectedAddress(address);
                 setLocationMode('success');
             },
             (error) => {
-                console.warn("GPS Fail:", error);
-                setLocationMode('manual'); 
+                console.warn("GPS Error:", error);
+                // Simple error handling: switch to manual
+                setLocationMode('manual');
             },
-            { enableHighAccuracy: true, timeout:20000, maximumAge:0 }
+            { enableHighAccuracy: true, timeout: 10000 }
         );
+    };
+
+    // --- NEW HELPER: Convert Lat/Lng to Text Address ---
+    const getAddressFromCoordinates = async (lat, lng) => {
+        try {
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+            );
+            const data = await response.json();
+            return data.display_name || "GPS Location Captured";
+        } catch (error) {
+            console.error("Reverse Geocoding failed:", error);
+            return "GPS Location Captured"; // Fallback if API fails
+        }
     };
 
     // --- HANDLE SUBMIT ---
@@ -131,8 +225,11 @@ const CameraCapture = () => {
             if (!confirmSubmit) return; 
         }
 
-        if (locationMode === 'manual' && manualAddress.length < 3) {
-            return alert("⚠️ Location Missing: Please type a valid location/landmark in the box.");
+        if (locationMode === 'manual') {
+            if (manualAddress.length < 3) return alert("Please enter a valid address");
+            if (pincode.length < 6) return alert("Please enter a valid 6-digit Pincode");
+
+    
         }
 
         setIsSubmitting(true);
@@ -141,15 +238,89 @@ const CameraCapture = () => {
         try {
             const imageUrl = await uploadImageToStorage(imageFile);
             
-            let finalLocation = null;
-            if (locationMode === 'manual') {
-                finalLocation = { lat: 0, lng: 0, address: manualAddress };
-            } else {
+// ... inside handleSubmit ...
+
+        // --- SMART LOCATION LOGIC ---
+        let finalLocation = null;
+        let locationPrecision = 'manual_text'; // Default to low precision
+
+        // CASE 1: Manual Text Only (User typed but didn't pick suggestion)
+        if (locationMode === 'manual') {
+            const proceed = window.confirm(
+                "⚠️ GPS Warning\n\nWe cannot verify the exact location coordinates for this address.\n" +
+                "The validation check will be disabled for this report.\n\n" +
+                "Proceed anyway?"
+            );
+            if (!proceed) { setIsSubmitting(false); return; }
+
+            finalLocation = { 
+                lat: 0, 
+                lng: 0, 
+                address: manualAddress + (pincode ? `, ${pincode}` : "") 
+            };
+            locationPrecision = 'manual_text'; // Flag for Admin to skip check
+        }
+        
+        // CASE 2: Valid Suggestion Selected (High Quality)
+        else if (locationMode === 'manual_success') {
+             finalLocation = {
+                lat: report.location.lat, 
+                lng: report.location.lng,
+                address: manualAddress + (pincode ? `, ${pincode}` : "") 
+            };
+            locationPrecision = 'precise'; // Admin should enforce check
+        }
+
+        // CASE 3: GPS Auto-Detect (High Quality)
+        // ... inside handleSubmit ...
+        else {
+             try {
+                 // 1. Ask for GPS
                  const position = await new Promise((resolve, reject) => 
-                    navigator.geolocation.getCurrentPosition(resolve, reject)
-                 );
-                 finalLocation = { lat: position.coords.latitude, lng: position.coords.longitude, address: "GPS Detected" };
+                    navigator.geolocation.getCurrentPosition(
+                        resolve, 
+                        reject,
+                        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                    )
+                );
+
+                // --- NEW: CHECK ACCURACY ---
+                // accuracy is measured in meters.
+                // If accuracy is worse than 2000 meters (2km), it's definitely an IP address guess.
+                const accuracy = position.coords.accuracy;
+                console.log(`GPS Accuracy: ${accuracy} meters`);
+
+                if (accuracy > 2000) {
+                    alert(`⚠️ GPS Signal Weak (Accuracy: ±${Math.round(accuracy)}m).\n\nYour device is using a rough location (likely IP-based).\n\nPlease search for your address manually.`);
+                    setIsSubmitting(false);
+                    setLocationMode('manual'); // Switch to manual mode immediately
+                    return;
+                }
+                // ---------------------------
+                
+                // If accuracy is good (e.g., on a phone), continue as normal
+                const realAddress = await getAddressFromCoordinates(
+                    position.coords.latitude, 
+                    position.coords.longitude
+                );
+
+                finalLocation = { 
+                    lat: position.coords.latitude, 
+                    lng: position.coords.longitude, 
+                    address: realAddress 
+                };
+                
+                // Since accuracy is good, we trust this location
+                locationPrecision = 'precise';
+
+            } catch (gpsError) {
+                console.error("GPS Error:", gpsError);
+                alert("GPS Failed. Please enter location manually.");
+                setIsSubmitting(false);
+                setLocationMode('manual');
+                return;
             }
+        }
 
             await saveReport({
                 userId: auth.currentUser.uid,
@@ -158,6 +329,7 @@ const CameraCapture = () => {
                 description: report.description,
                 severity: manualSeverity,
                 location: finalLocation,
+                location_precision: locationPrecision,
                 status: 'Pending',
                 isSuspicious: mismatch > 4 
             });
@@ -194,7 +366,6 @@ const CameraCapture = () => {
                         {image ? (
                             <>
                                 <img src={image} className="w-full h-full object-cover" alt="Preview" />
-                                
                                 <button 
                                     onClick={handleRetake}
                                     className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-md transition-all flex items-center gap-1 shadow-md z-20 border border-white/20"
@@ -224,7 +395,7 @@ const CameraCapture = () => {
                         )}
                     </div>
 
-                    {/* ONLY  IF REPORT EXISTS */}
+                    {/* REPORT DETAILS SECTION */}
                     {report && (
                         <div className="animate-fade-in space-y-6">
                             
@@ -276,10 +447,11 @@ const CameraCapture = () => {
                                 </div>
                             </div>
 
-                            {/* LOCATION BAR */}
+                            {/* LOCATION SECTION */}
                             <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Location</label>
+                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Location Details</label>
                                 
+                                {/* 1. DETECTING STATE */}
                                 {locationMode === 'detecting' && (
                                     <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 text-gray-500 animate-pulse">
                                         <MapPin size={18} />
@@ -287,38 +459,113 @@ const CameraCapture = () => {
                                     </div>
                                 )}
 
+                                {/* 2. SUCCESS GPS STATE */}
                                 {locationMode === 'success' && (
-                                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200 shadow-sm">
-                                        <div className="flex items-center gap-3 text-green-700">
-                                            <div className="bg-green-100 p-1.5 rounded-full">
-                                                <CheckCircle size={16} />
+                                    <div className="p-3 bg-green-50 rounded-lg border border-green-200 shadow-sm flex items-center justify-between">
+                                        <div className="overflow-hidden">
+                                            {/* Header */}
+                                            <div className="flex items-center gap-2 text-green-700 mb-0.5">
+                                                <CheckCircle size={14} />
+                                                <span className="text-xs font-bold uppercase">GPS Locked</span>
                                             </div>
-                                            <span className="text-sm font-bold">GPS Locked</span>
+                                            
+                                            {/* THE NEW PART: Showing the address text */}
+                                            <p className="text-xs text-gray-600 font-medium truncate max-w-[200px]" title={detectedAddress}>
+                                                {detectedAddress}
+                                            </p>
                                         </div>
+
                                         <button 
                                             onClick={() => setLocationMode('manual')}
-                                            className="text-xs text-gray-500 hover:text-blue-600 underline flex items-center gap-1 font-medium"
+                                            className="text-xs text-blue-600 underline shrink-0 font-medium px-2 py-1 hover:bg-blue-50 rounded"
                                         >
-                                            <Edit2 size={12} /> Change
+                                            Edit
                                         </button>
                                     </div>
                                 )}
 
+                                {/* 3. MANUAL INPUT STATE (Redesigned with Pincode) */}
                                 {locationMode === 'manual' && (
-                                    <div className="relative animate-fade-in">
-                                        <MapPin size={18} className="absolute left-3 top-3.5 text-red-500" />
-                                        <input 
-                                            type="text"
-                                            value={manualAddress}
-                                            onChange={(e) => setManualAddress(e.target.value)}
-                                            placeholder="Enter location (e.g. Civil Lines, Market)"
-                                            className="w-full pl-10 pr-4 py-3 bg-red-50 border border-red-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:bg-white outline-none text-sm shadow-sm transition-all"
-                                            autoFocus
-                                        />
-                                        <p className="text-[10px] text-red-500 mt-1.5 ml-1 font-medium flex items-center gap-1">
-                                            <span className="w-1 h-1 rounded-full bg-red-500 inline-block"></span> 
-                                            GPS failed. Please enter manually.
+                                    <div className="relative animate-fade-in space-y-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                                        
+                                        {/* Address Search */}
+                                        <div className="relative">
+                                            <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Address / Landmark</label>
+                                            <div className="relative">
+                                                <MapPin size={16} className="absolute left-3 top-3 text-blue-500" />
+                                                <input 
+                                                    type="text"
+                                                    value={manualAddress}
+                                                    onChange={handleManualInputChange}
+                                                    placeholder="Search area (e.g. Civil Lines)"
+                                                    className="w-full pl-9 pr-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm shadow-sm"
+                                                    autoFocus
+                                                />
+                                                {/* Suggestions Dropdown */}
+                                                {showSuggestions && suggestions.length > 0 && (
+                                                    <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto mt-1">
+                                                        {suggestions.map((item, index) => (
+                                                            <div 
+                                                                key={index}
+                                                                onClick={() => selectSuggestion(item)}
+                                                                className="p-2.5 hover:bg-blue-50 cursor-pointer border-b border-gray-100 flex items-start gap-2"
+                                                            >
+                                                                <MapPin size={14} className="text-gray-400 mt-1 shrink-0" />
+                                                                <div>
+                                                                    <p className="text-sm font-medium text-gray-800 line-clamp-1">
+                                                                        {item.name || item.address.road || "Location"}
+                                                                    </p>
+                                                                    <p className="text-[10px] text-gray-500 line-clamp-1">{item.display_name}</p>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Pincode Field */}
+                                        <div>
+                                            <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Pincode</label>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-2.5 text-gray-400 text-xs font-bold">#</span>
+                                                <input 
+                                                    type="tel" 
+                                                    maxLength="6"
+                                                    value={pincode}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value.replace(/\D/g, ''); // Only numbers
+                                                        if (val.length <= 6) setPincode(val);
+                                                    }}
+                                                    placeholder="226001"
+                                                    className="w-full pl-9 pr-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm shadow-sm font-mono tracking-wide"
+                                                />
+                                            </div>
+                                        </div>
+                                        
+                                        <p className="text-[10px] text-gray-400 text-center pt-1">
+                                            *Address & Pincode required when GPS fails.
                                         </p>
+                                    </div>
+                                )}
+
+                                {/* 4. MANUAL SUCCESS STATE */}
+                                {locationMode === 'manual_success' && (
+                                    <div className="p-3 bg-green-50 rounded-lg border border-green-200 shadow-sm flex items-center justify-between">
+                                        <div className="overflow-hidden">
+                                            <div className="flex items-center gap-2 text-green-700 mb-0.5">
+                                                <CheckCircle size={14} />
+                                                <span className="text-xs font-bold uppercase">Location Set</span>
+                                            </div>
+                                            <p className="text-xs text-gray-600 truncate max-w-[200px] font-medium">{manualAddress}</p>
+                                            {pincode && <p className="text-[10px] text-gray-500">Pincode: {pincode}</p>}
+                                        </div>
+                                        <button 
+                                            onClick={() => { setLocationMode('manual'); setManualAddress(''); setPincode(''); }}
+                                            className="text-xs text-blue-600 underline shrink-0 font-medium px-2 py-1 hover:bg-blue-50 rounded"
+                                        >
+                                            Change
+                                        </button>
                                     </div>
                                 )}
                             </div>
