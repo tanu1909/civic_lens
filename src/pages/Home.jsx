@@ -1,22 +1,19 @@
-import React from 'react'
-
+import MapPage from '../components/MapPage';
 
 const Home = () => {
   return (
-    <div className="flex w-full h-screen">
-      
-      {/* Left Div - Blue */}
-      <div className="flex-1 bg-blue-600 flex items-center justify-center text-white">
-        <h2 className="text-3xl font-bold">Civic Data</h2>
+    <div className="flex flex-col h-screen"> {/* h-screen ensures the page fills the viewport */}
+      {/* First Div */}
+      <div className="p-4 bg-white">
+        <h2 className="text-2xl font-bold text-center text-blue-600">Welcome</h2>
       </div>
 
-      {/* Right Div - Green */}
-      <div className="flex-1 bg-emerald-600 flex items-center justify-center text-white">
-        <h2 className="text-3xl font-bold">Map</h2>
+      {/* Second Div - The Map Container */}
+      <div className="flex-grow w-full overflow-hidden">
+        <MapPage />
       </div>
-
     </div>
-  )
-}
+  );
+};
 
-export default Home
+export default Home;
