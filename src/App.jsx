@@ -15,7 +15,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 // Pages
 import Home from "./pages/Home";
-import RoleSelection from "./components/RoleSelection";
+
 import AuthPage from "./pages/AuthPage";
 import About from "./pages/About";
 import Feedback from "./pages/Feedback";
