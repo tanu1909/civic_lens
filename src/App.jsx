@@ -19,6 +19,10 @@ import Feedback from "./pages/Feedback";
 import UserHistory from "./pages/UserHistory";
 import AdminFeedback from "./pages/AdminFeedback";
 
+
+import AdminDashboard from "./pages/AdminDashboard";
+
+
 const App = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -29,22 +33,33 @@ const App = () => {
       setLoading(false);
     });
 
-    return unsubscribe;
+    return () => unsubscribe();
   }, []);
 
   if (loading) {
+
     return <div className="flex items-center justify-center h-screen text-xl font-semibold">Loading...</div>;
+
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+
   }
 
   return (
     <Router>
+
       <div className="flex flex-col min-h-screen">
         <Toaster position="top-center" reverseOrder={false} />
+
+      <div className="flex flex-col min-h-screen w-full overflow-hidden">
+        
+
         <Navbar user={user} />
 
         <main className="flex-grow">
           <Routes>
+            {/* Public Routes */}
             <Route path="/" element={<Home />} />
+
             
             {/* 1. GATEWAY: User chooses Citizen or Official */}
             <Route 
@@ -53,27 +68,47 @@ const App = () => {
             />
 
             {/* 2. AUTH FORM: Where the actual login happens */}
+
+            <Route path="/about" element={<About />} />
+            <Route path="/feedback" element={<Feedback />} />
+            <Route path="/map" element={<MapPage />} />
+
+            {/* Auth Route: Redirect to Home if already logged in */}
+
             <Route
               path="/auth"
               element={!user ? <AuthPage /> : <Navigate to="/" replace />}
             />
 
+
             <Route path="/about" element={<About />} />
             <Route path="/feedback" element={<Feedback />} />
             <Route path="/map" element={<MapPage />} />
             
+
+            {/* Protected Route: Redirect to Login if not logged in */}
+
             <Route
               path="/scan"
               element={
                 user ? (
                   <CameraCapture user={user} />
                 ) : (
-                  <Navigate to="/login" replace />
+                  <Navigate to="/login" state={{ from: "/scan" }} replace />
                 )
               }
             />
+
             
             <Route path="/history" element={<UserHistory />} />
+
+
+            {/* User History */}
+            <Route path="/history" element={<UserHistory />} />
+
+            {/* Admin Routes */}
+            <Route path="/admin" element={<AdminDashboard />} />
+
             <Route path="/admin/feedback" element={<AdminFeedback />} />
           </Routes>
         </main>
