@@ -16,7 +16,7 @@ import About from "./pages/About";
 import Feedback from "./pages/Feedback";
 import UserHistory from "./pages/UserHistory";
 import AdminFeedback from "./pages/AdminFeedback";
-
+import AdminDashboard from "./pages/AdminDashboard";
 
 const App = () => {
   const [user, setUser] = useState(null);
@@ -28,43 +28,50 @@ const App = () => {
       setLoading(false);
     });
 
-    return unsubscribe;
+    return () => unsubscribe();
   }, []);
 
   if (loading) {
-    return <div className="text-center mt-10">Loading...</div>;
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
   return (
     <Router>
-      <div className="flex flex-col min-h-screen">
+      <div className="flex flex-col min-h-screen w-full overflow-hidden">
+        
         <Navbar user={user} />
 
         <main className="flex-grow">
           <Routes>
+            {/* Public Routes */}
             <Route path="/" element={<Home />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/feedback" element={<Feedback />} />
+            <Route path="/map" element={<MapPage />} />
 
+            {/* Auth Route: Redirect to Home if already logged in */}
             <Route
               path="/login"
               element={!user ? <AuthPage /> : <Navigate to="/" replace />}
             />
 
-            <Route path="/about" element={<About />} />
-            <Route path="/feedback" element={<Feedback />} />
-            <Route path="/map" element={<MapPage />} />
+            {/* Protected Route: Redirect to Login if not logged in */}
             <Route
               path="/scan"
               element={
                 user ? (
                   <CameraCapture user={user} />
                 ) : (
-                  <Navigate to="/login" replace />
+                  <Navigate to="/login" state={{ from: "/scan" }} replace />
                 )
               }
             />
-            {/* Added from merge conflict resolution */}
+
+            {/* User History */}
             <Route path="/history" element={<UserHistory />} />
 
+            {/* Admin Routes */}
+            <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/feedback" element={<AdminFeedback />} />
           </Routes>
         </main>

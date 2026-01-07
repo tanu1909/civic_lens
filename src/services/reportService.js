@@ -1,12 +1,10 @@
-/* * REPORT SERVICE (SUPABASE VERSION)
- * Handles saving reports to Supabase Database & Storage.
- */
 import { supabase } from './supabaseClient'; 
 
 //  Image Upload Function 
 export const uploadImageToStorage = async (imageFile) => {
     try {
         const fileName = `${Date.now()}_${imageFile.name.replace(/\s/g, '_')}`;
+
 
         const { data, error } = await supabase.storage
             .from('images')
