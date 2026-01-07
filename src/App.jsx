@@ -9,7 +9,7 @@ import Navbar from "./components/Navbar";
 import FooterCard from "./components/FooterCard";
 import CameraCapture from "./components/CameraCapture";
 import MapPage from "./components/MapPage";
-import RoleSelection from "./components/RoleSelection"; // Consider moving to pages/ later
+import RoleSelection from "./components/RoleSelection";
 
 // Pages
 import Home from "./pages/Home";
@@ -18,10 +18,8 @@ import About from "./pages/About";
 import Feedback from "./pages/Feedback";
 import UserHistory from "./pages/UserHistory";
 import AdminFeedback from "./pages/AdminFeedback";
-
-
 import AdminDashboard from "./pages/AdminDashboard";
-
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const App = () => {
   const [user, setUser] = useState(null);
@@ -37,57 +35,39 @@ const App = () => {
   }, []);
 
   if (loading) {
-
-    return <div className="flex items-center justify-center h-screen text-xl font-semibold">Loading...</div>;
-
-    return <div className="flex justify-center items-center h-screen">Loading...</div>;
-
+    return (
+      <div className="flex items-center justify-center h-screen text-xl font-semibold">
+        Loading...
+      </div>
+    );
   }
 
   return (
-    <Router>
-
-      <div className="flex flex-col min-h-screen">
-        <Toaster position="top-center" reverseOrder={false} />
-
+    <ErrorBoundary>
+<Router>
       <div className="flex flex-col min-h-screen w-full overflow-hidden">
-        
-
+        <Toaster position="top-center" reverseOrder={false} />
         <Navbar user={user} />
 
         <main className="flex-grow">
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Home />} />
-
-            
-            {/* 1. GATEWAY: User chooses Citizen or Official */}
-            <Route 
-              path="/login" 
-              element={!user ? <RoleSelection /> : <Navigate to="/" replace />} 
-            />
-
-            {/* 2. AUTH FORM: Where the actual login happens */}
-
             <Route path="/about" element={<About />} />
             <Route path="/feedback" element={<Feedback />} />
             <Route path="/map" element={<MapPage />} />
 
-            {/* Auth Route: Redirect to Home if already logged in */}
-
+            {/* Auth Routes */}
+            <Route 
+              path="/login" 
+              element={!user ? <RoleSelection /> : <Navigate to="/" replace />} 
+            />
             <Route
               path="/auth"
               element={!user ? <AuthPage /> : <Navigate to="/" replace />}
             />
 
-
-            <Route path="/about" element={<About />} />
-            <Route path="/feedback" element={<Feedback />} />
-            <Route path="/map" element={<MapPage />} />
-            
-
-            {/* Protected Route: Redirect to Login if not logged in */}
-
+            {/* Protected Routes */}
             <Route
               path="/scan"
               element={
@@ -98,24 +78,18 @@ const App = () => {
                 )
               }
             />
-
-            
-            <Route path="/history" element={<UserHistory />} />
-
-
-            {/* User History */}
             <Route path="/history" element={<UserHistory />} />
 
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboard />} />
-
             <Route path="/admin/feedback" element={<AdminFeedback />} />
           </Routes>
         </main>
-
         <FooterCard />
-      </div>
+</div>   
     </Router>
+    </ErrorBoundary>
+    
   );
 };
 

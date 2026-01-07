@@ -69,9 +69,9 @@ const Navbar = ({ user }) => {
             <li>
               <NavLink to="/admin" className={navLinkStyles}>Admin Dashboard</NavLink>
             </li>
-            <li>
+            {/* <li>
               <NavLink to="/issues" className={navLinkStyles}>Local Issues</NavLink>
-            </li>
+            </li> */}
             {user && (
                <li><NavLink to="/history" className={navLinkStyles}>My Reports</NavLink></li>
             )}
@@ -108,19 +108,40 @@ const Navbar = ({ user }) => {
       </div>
 
       {/* MOBILE MENU */}
+  {/* MOBILE MENU */}
       {isOpen && (
-        <div className="mt-2 mx-auto max-w-7xl md:hidden bg-white/95 backdrop-blur-xl border border-slate-100 p-6 rounded-2xl shadow-2xl space-y-4">
-          <ul className="flex flex-col gap-4 text-sm font-semibold">
-            <li><NavLink to="/" onClick={() => setIsOpen(false)}>Home</NavLink></li>
-            <li><NavLink to="/admin" onClick={() => setIsOpen(false)}>Admin Dashboard</NavLink></li>
-            <li><NavLink to="/issues" onClick={() => setIsOpen(false)}>Local Issues</NavLink></li>
+        <div className="absolute top-full left-4 right-4 mt-2 md:hidden bg-white/95 backdrop-blur-xl border border-slate-100 p-6 rounded-2xl shadow-2xl z-[60]">
+          <ul className="flex flex-col gap-4 text-sm font-semibold text-slate-600">
+            <li>
+              <NavLink to="/" onClick={() => setIsOpen(false)} className={({ isActive }) => isActive ? "text-blue-600" : ""}>
+                Home
+              </NavLink>
+            </li>
+            
+            {/* Show My Reports if logged in */}
+            {user && (
+              <li>
+                <NavLink to="/history" onClick={() => setIsOpen(false)} className={({ isActive }) => isActive ? "text-blue-600" : ""}>
+                  My Reports
+                </NavLink>
+              </li>
+            )}
+            
+            <li>
+              <NavLink to="/admin" onClick={() => setIsOpen(false)} className={({ isActive }) => isActive ? "text-blue-600" : ""}>
+                Admin Dashboard
+              </NavLink>
+            </li>
           </ul>
-          <button 
-            onClick={() => { setIsOpen(false); handleShareClick(); }}
-            className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl"
-          >
-            {user ? 'Share Issues' : 'Login to Share'}
-          </button>
+
+          <div className="mt-6 pt-6 border-t border-slate-100">
+            <button 
+              onClick={() => { setIsOpen(false); handleShareClick(); }}
+              className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-200 active:scale-95 transition-all"
+            >
+              {user ? 'Share Issues' : 'Login to Share'}
+            </button>
+          </div>
         </div>
       )}
     </nav>
