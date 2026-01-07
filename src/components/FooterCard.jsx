@@ -5,9 +5,11 @@ import { Mail, MessageSquare, Info } from 'lucide-react';
 const FooterCard = () => {
 
 const navLinkStyles = ({ isActive }) => 
-    isActive 
-      ? "text-blue-600 font-semibold" // Styles for the active page
-      : "text-gray-600 hover:text-blue-600 font-medium transition-colors"; // Styles for other pages
+    `flex items-center gap-1.5 text-sm transition-all duration-300 ${
+      isActive 
+        ? "text-blue-600 font-semibold" 
+        : "text-slate-600 hover:text-blue-600 font-medium"
+    }`;
 
 
   return (

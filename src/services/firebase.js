@@ -22,5 +22,5 @@ export const signInWithGoogle = () => {
   return signInWithPopup(auth, provider);
 };
 
-// Firestore
+ // Firestore
 export const db = getFirestore(app); 
