@@ -66,14 +66,15 @@ const Navbar = ({ user }) => {
                 )}
               </NavLink>
             </li>
+         
+         {/* CONDITIONAL RENDERING BASED ON ROLE */}
+         {user?.role === 'official' && (
             <li>
               <NavLink to="/admin" className={navLinkStyles}>Admin Dashboard</NavLink>
             </li>
-            <li>
-              <NavLink to="/issues" className={navLinkStyles}>Local Issues</NavLink>
-            </li>
+            )}
             {user && (
-               <li><NavLink to="/history" className={navLinkStyles}>My Reports</NavLink></li>
+               <li><NavLink to="/history" className={navLinkStyles}>Reports</NavLink></li>
             )}
           </ul>
 
@@ -113,7 +114,7 @@ const Navbar = ({ user }) => {
           <ul className="flex flex-col gap-4 text-sm font-semibold">
             <li><NavLink to="/" onClick={() => setIsOpen(false)}>Home</NavLink></li>
             <li><NavLink to="/admin" onClick={() => setIsOpen(false)}>Admin Dashboard</NavLink></li>
-            <li><NavLink to="/issues" onClick={() => setIsOpen(false)}>Local Issues</NavLink></li>
+            <li><NavLink to="/history" onClick={() => setIsOpen(false)}> Reports</NavLink></li>
           </ul>
           <button 
             onClick={() => { setIsOpen(false); handleShareClick(); }}
