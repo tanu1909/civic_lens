@@ -1,7 +1,3 @@
-
-import React, { useEffect, useState } from 'react';
-// FIXED: Added Navigate to imports
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import React, { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
@@ -20,18 +16,7 @@ import About from "./pages/About";
 import Feedback from "./pages/Feedback";
 import UserHistory from "./pages/UserHistory";
 import AdminFeedback from "./pages/AdminFeedback";
-
-
-import Home from './pages/Home';
-import Navbar from './components/Navbar';
-import FooterCard from './components/FooterCard';
-import AuthPage from './pages/AuthPage';
-import About from './pages/About.jsx';
-import Feedback from './pages/Feedback.jsx';
-import CameraCapture from './components/CameraCapture';
-import AdminFeedback from './pages/AdminFeedback.jsx';
-import AdminDashboard from './pages/AdminDashboard'; 
-
+import AdminDashboard from "./pages/AdminDashboard";
 
 const App = () => {
   const [user, setUser] = useState(null);
@@ -43,67 +28,51 @@ const App = () => {
       setLoading(false);
     });
 
-    return unsubscribe;
+    return () => unsubscribe();
   }, []);
 
   if (loading) {
-
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
-    return <div className="text-center mt-10">Loading...</div>;
-
   }
 
   return (
     <Router>
-
       <div className="flex flex-col min-h-screen w-full overflow-hidden">
-      <div className="flex flex-col min-h-screen">
-
+        
         <Navbar user={user} />
 
         <main className="flex-grow">
           <Routes>
+            {/* Public Routes */}
             <Route path="/" element={<Home />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/feedback" element={<Feedback />} />
+            <Route path="/map" element={<MapPage />} />
 
-            {/* FIXED: Single Login Route */}
-            <Route 
-              path="/login" 
-              element={!user ? <AuthPage /> : <Navigate to="/" replace />} 
-            />
-
+            {/* Auth Route: Redirect to Home if already logged in */}
             <Route
               path="/login"
               element={!user ? <AuthPage /> : <Navigate to="/" replace />}
             />
 
-            {/* FIXED: Single Scan Route (Protected) */}
-            <Route 
-              path="/scan" 
-              element={user ? <CameraCapture user={user} /> : <Navigate to="/login" state={{ from: '/scan' }} replace />} 
-            />
-
-            {/* FIXED: Single Admin Routes */}
-
-            <Route path="/about" element={<About />} />
-            <Route path="/feedback" element={<Feedback />} />
-            <Route path="/map" element={<MapPage />} />
+            {/* Protected Route: Redirect to Login if not logged in */}
             <Route
               path="/scan"
               element={
                 user ? (
                   <CameraCapture user={user} />
                 ) : (
-                  <Navigate to="/login" replace />
+                  <Navigate to="/login" state={{ from: "/scan" }} replace />
                 )
               }
             />
-            {/* Added from merge conflict resolution */}
+
+            {/* User History */}
             <Route path="/history" element={<UserHistory />} />
 
-
-            <Route path="/admin/feedback" element={<AdminFeedback />} />
+            {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboard />} />
-
+            <Route path="/admin/feedback" element={<AdminFeedback />} />
           </Routes>
         </main>
 

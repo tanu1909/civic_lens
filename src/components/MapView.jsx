@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
+// --- Fix for Leaflet Default Marker Icons ---
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -10,6 +11,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
+// --- Helper: Recenter map when reports change ---
 const RecenterMap = ({ center }) => {
   const map = useMap();
   useEffect(() => {
@@ -19,13 +21,19 @@ const RecenterMap = ({ center }) => {
 };
 
 const MapView = ({ reports = [] }) => {
+  // Default Center (e.g., Prayagraj/Allahabad)
   const defaultPosition = [25.4358, 81.8463]; 
   let activeCenter = defaultPosition;
   
+  // Try to find the first valid report to center the map on
   const validReport = reports.find(r => {
       let loc = r.location;
       if (typeof loc === 'string') {
-          try { loc = JSON.parse(loc); } catch(e){ return false; }
+          try { 
+            // Skip non-JSON strings like "GPS Detected"
+            if (!loc.includes('{')) return false;
+            loc = JSON.parse(loc); 
+          } catch(e){ return false; }
       }
       return loc && loc.lat && loc.lat !== 0; 
   });
@@ -43,56 +51,50 @@ const MapView = ({ reports = [] }) => {
       style={{ height: "400px", width: "100%", borderRadius: "10px", zIndex: 0 }}
     >
       <RecenterMap center={activeCenter} />
-      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      
+      <TileLayer 
+        attribution='&copy; OpenStreetMap contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
 
       {reports.map((report) => {
         try {
           let loc = report.location;
-          if (typeof loc === 'string') loc = JSON.parse(loc);
           
-          if (loc && loc.lat && loc.lat !== 0) {
+          // Parse location safely
+          if (typeof loc === 'string') {
+             try {
+                if (!loc.includes('{')) return null;
+                loc = JSON.parse(loc);
+             } catch(e) { return null; }
+          }
+          
+          // Only render if we have valid coordinates
+          if (loc && loc.lat && loc.lng) {
             return (
               <Marker key={report.id} position={[loc.lat, loc.lng]}>
                 <Popup>
-                  {/* --- CUSTOM POPUP WITH DESCRIPTION --- */}
-                  <div className="min-w-[220px] max-w-[260px]">
-                    
-                    {/* 1. Header: Title & Severity */}
+                  <div className="min-w-[220px]">
                     <div className="flex justify-between items-start mb-2 border-b pb-2">
-                        <h3 className="font-bold text-slate-900 text-sm m-0 pr-2 leading-tight">
-                            {report.issue}
-                        </h3>
-                        <span className={`text-[10px] px-2 py-0.5 rounded font-bold text-white whitespace-nowrap ${
+                        <h3 className="font-bold text-sm m-0 pr-2">{report.issue}</h3>
+                        <span className={`text-[10px] px-2 py-0.5 rounded font-bold text-white ${
                             report.severity >= 7 ? 'bg-red-600' : 'bg-yellow-500'
                         }`}>
                             {report.severity}/10
                         </span>
                     </div>
 
-                    {/* 2. Image */}
                     {report.imageUrl && (
                         <img 
                             src={report.imageUrl} 
-                            className="w-full h-28 object-cover rounded mb-2 border border-slate-200"
+                            className="w-full h-24 object-cover rounded mb-2 border"
                             alt="Evidence"
                         />
                     )}
 
-                    {/* 3. NEW: AI Description (Truncated to keep popup clean) */}
-                    <div className="bg-slate-50 p-2 rounded border border-slate-100 mb-2">
-                        <p className="text-[11px] text-slate-700 leading-snug line-clamp-3">
-                            {report.description || "No description provided."}
-                        </p>
-                    </div>
-
-                    {/* 4. Footer: GPS Location */}
-                    <div className="flex items-center gap-1 text-[10px] text-slate-500 italic">
-                        <span>📍</span>
-                        <span className="font-mono">
-                           {parseFloat(loc.lat).toFixed(5)}, {parseFloat(loc.lng).toFixed(5)}
-                        </span>
-                    </div>
-
+                    <p className="text-xs text-slate-600 line-clamp-3">
+                        {report.description}
+                    </p>
                   </div>
                 </Popup>
               </Marker>
@@ -101,45 +103,8 @@ const MapView = ({ reports = [] }) => {
           return null;
         } catch(e) { return null; }
       })}
-
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import L from "leaflet";
-
-// Fix marker icon issue (very common)
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
-
-const MapView = () => {
-  const position = [25.4920, 81.8639]; // Prayagraj example
-
-  return (
-    <MapContainer
-      center={position}
-      zoom={13}
-      style={{ height: "80vh", width: "100%" }}
-    >
-      <TileLayer
-        attribution='&copy; OpenStreetMap contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      <Marker position={position}>
-        <Popup>Civic issue reported here</Popup>
-      </Marker>
-
     </MapContainer>
   );
 };
 
-
 export default MapView;
-
-export default MapView;
-

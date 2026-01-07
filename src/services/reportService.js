@@ -1,11 +1,3 @@
-import { supabase } from '../supabaseClient';
-
-export const uploadImageToStorage=async(imageFile)=>{
-try{
-
-/* * REPORT SERVICE (SUPABASE VERSION)
- * Handles saving reports to Supabase Database & Storage.
- */
 import { supabase } from './supabaseClient'; 
 
 //  Image Upload Function 
