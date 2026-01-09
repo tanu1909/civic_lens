@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom'; 
-import { Search, Menu, X, LogOut } from 'lucide-react'; 
+import { Search, Menu, X, LogOut, Sun, Moon } from 'lucide-react'; 
 import { auth } from '../services/firebase.js'; 
 import { signOut } from 'firebase/auth';
 import toast from 'react-hot-toast';
@@ -15,6 +15,24 @@ const Navbar = ({ user }) => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+
+  //for switching b/w dark and light modes
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
+
+useEffect(() => {
+  if (theme === 'dark') {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
+  localStorage.setItem('theme', theme);
+}, [theme]);
+
+const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
+
+
+
 
   const handleShareClick = () => {
     if (user) {
@@ -88,6 +106,11 @@ const Navbar = ({ user }) => {
               onClick={handleShareClick}
             >
               {user ? 'Share Issues' : 'Login to Share'}
+            </button>
+
+
+            <button onClick={toggleTheme} className="p-2.5 rounded-xl transition-all hover:bg-slate-100 dark:hover:bg-slate-800">
+            {theme === 'light' ? <Moon size={20} className="text-slate-600" /> : <Sun size={20} className="text-yellow-400" />}
             </button>
 
             {user && (

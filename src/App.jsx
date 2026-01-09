@@ -10,6 +10,7 @@ import FooterCard from "./components/FooterCard";
 import CameraCapture from "./components/CameraCapture";
 import MapPage from "./components/MapPage";
 import RoleSelection from "./components/RoleSelection";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 // Pages
 import Home from "./pages/Home";
@@ -19,7 +20,7 @@ import Feedback from "./pages/Feedback";
 import UserHistory from "./pages/UserHistory";
 import AdminFeedback from "./pages/AdminFeedback";
 import AdminDashboard from "./pages/AdminDashboard";
-import ErrorBoundary from "./components/ErrorBoundary";
+import Team from "./pages/Team";
 
 const App = () => {
   const [user, setUser] = useState(null);
@@ -79,6 +80,7 @@ const App = () => {
               }
             />
             <Route path="/history" element={<UserHistory />} />
+            <Route path="/team" element={<Team />} />
 
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboard />} />

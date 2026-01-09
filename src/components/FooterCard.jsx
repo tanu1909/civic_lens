@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, NavLink } from 'react-router-dom'; 
-import { Mail, MessageSquare, Info } from 'lucide-react';
+import { Mail, MessageSquare, Info,User } from 'lucide-react';
 
 const FooterCard = () => {
 
@@ -43,14 +43,14 @@ const navLinkStyles = ({ isActive }) =>
             <span>Feedback</span>
           </NavLink>
 
-         
-          <a 
-            href="mailto:tanuchoudhary1319@gmail.com" 
-            className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors"
+         <NavLink 
+            to="/team" 
+            className={navLinkStyles}
           >
-            <Mail size={16} />
-            <span>Contact Us</span>
-          </a>
+          <User size={16} />
+          <span>Our Team</span>
+          </NavLink>
+         
         </div>
       </div>
     </footer>
