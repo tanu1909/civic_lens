@@ -89,6 +89,7 @@ const CameraCapture = () => {
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
+
     // --- ADDRESS SEARCH FUNCTIONS ---
     const handleManualInputChange = (e) => {
         setManualAddress(e.target.value);
@@ -101,6 +102,12 @@ const CameraCapture = () => {
         if (!manualAddress || manualAddress.length < 3) {
             setSuggestions([]);
             setShowSuggestions(false);
+
+    // --- LOCATION FUNCTION ---
+    const detectLocation = () => {
+        if (!("geolocation" in navigator)) {
+            setLocationMode('manual');
+
             return;
         }
         if(isAddressVerified) return;
@@ -160,6 +167,7 @@ const CameraCapture = () => {
         );
     };
 
+
     const getAddressFromCoordinates = async (lat, lng) => {
         try {
             const response = await fetch(
@@ -173,6 +181,9 @@ const CameraCapture = () => {
     };
 
     // --- SUBMIT LOGIC ---
+
+    // --- HANDLE SUBMIT ---
+
     const handleSubmit = async () => {
         if (!auth.currentUser) return alert("Please Login!");
         if (manualSeverity < 4) return alert("Severity must be 4+ to report.");
@@ -223,8 +234,12 @@ const CameraCapture = () => {
 
         <div className="fixed top-20 inset-x-0 bottom-0 bg-gray-900/90 backdrop-blur-sm z-[50] flex items-center justify-center p-4">
             
+
             {/* MODAL CONTAINER */}
             <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-fade-in-up border dark:border-slate-800">
+
+            <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-fade-in-up">
+
                 
                 {/* 1. FIXED HEADER */}
                 <div className="bg-blue-600 p-4 flex justify-between items-center shrink-0">
@@ -254,7 +269,11 @@ const CameraCapture = () => {
                             </label>
                         )}
                         {loading && (
+
                             <div className="absolute inset-0 bg-white/90 dark:bg-slate-900/90 flex flex-col items-center justify-center z-30">
+
+                            <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center z-30">
+
                                 <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-600 border-t-transparent"></div>
                                 <p className="text-blue-600 font-bold mt-3 text-sm animate-pulse">{loadingText}</p>
                             </div>
@@ -300,6 +319,7 @@ const CameraCapture = () => {
                                     </div>
                                 )}
 
+
                                 {(locationMode === 'manual' || locationMode === 'manual_success') && (
                                     <div className="relative animate-fade-in space-y-3 p-3 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700">
                                         <div className="relative">
@@ -340,6 +360,22 @@ const CameraCapture = () => {
                                             )}
                                         </div>
                                         {isAddressVerified && <div className="text-xs text-green-600 dark:text-green-400 font-bold flex items-center gap-1 mt-1"><CheckCircle size={12}/> Address Verified</div>}
+                                {locationMode === 'manual' && (
+                                    <div className="relative animate-fade-in">
+                                        <MapPin size={18} className="absolute left-3 top-3.5 text-red-500" />
+                                        <input 
+                                            type="text"
+                                            value={manualAddress}
+                                            onChange={(e) => setManualAddress(e.target.value)}
+                                            placeholder="Enter location (e.g. Civil Lines, Market)"
+                                            className="w-full pl-10 pr-4 py-3 bg-red-50 border border-red-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:bg-white outline-none text-sm shadow-sm transition-all"
+                                            autoFocus
+                                        />
+                                        <p className="text-[10px] text-red-500 mt-1.5 ml-1 font-medium flex items-center gap-1">
+                                            <span className="w-1 h-1 rounded-full bg-red-500 inline-block"></span> 
+                                            GPS failed. Please enter manually.
+                                        </p>
+
                                     </div>
                                 )}
                             </div>
@@ -349,7 +385,11 @@ const CameraCapture = () => {
 
                 {/* 3. FIXED FOOTER */}
                 {report && (
+
                     <div className="p-4 border-t border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+
+                    <div className="p-4 border-t border-gray-100 bg-white shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+
                         <button
                             onClick={handleSubmit}
                             disabled={isSubmitting}

@@ -118,7 +118,11 @@ const ReportCard = ({ report, onDelete }) => {
     const displayStatus = report.status === 'Rejected' ? 'Pending' : (report.status || 'Pending');
 
     return (
+
         <div className='group bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col h-full'>
+
+        <div className='group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col h-full'>
+
             
             {/* IMAGE SECTION */}
             <div className='h-48 overflow-hidden relative bg-gray-100 dark:bg-slate-800'>
@@ -145,12 +149,24 @@ const ReportCard = ({ report, onDelete }) => {
                             e.stopPropagation();
                             onDelete();
                         }}
+
                         className="absolute top-3 left-3 bg-white/90 dark:bg-slate-900/90 p-2 rounded-full text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm z-10 opacity-0 group-hover:opacity-100"
                         title="Delete Report"
+
+                    className="absolute top-3 left-3 bg-white/90 p-1.5 rounded-full text-red-500 hover:bg-red-50 hover:text-red-700 transition-colors shadow-sm z-10"
+                    title="Delete Report"
+
                     >
                         <Trash2 size={14} />
                     </button>
                 )}
+
+
+                <div className='absolute top-3 right-3 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold shadow-sm flex items-center gap-1 text-gray-600'>
+                    <Calendar size={12} />
+                    {date}
+                </div>
+
 
                 {/* Severity Bar */}
                 <div className={`absolute bottom-0 left-0 right-0 h-1 ${report.severity > 7 ? 'bg-red-500' : report.severity > 4 ? 'bg-orange-400' : 'bg-green-500'}`}></div>

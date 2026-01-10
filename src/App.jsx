@@ -2,18 +2,22 @@ import React, { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./services/firebase";
+
 import { supabase } from "./services/supabaseClient"; 
 import { Toaster } from "react-hot-toast";
+
 
 // Components
 import Navbar from "./components/Navbar";
 import FooterCard from "./components/FooterCard";
 import CameraCapture from "./components/CameraCapture";
 import MapPage from "./components/MapPage";
+
 import RoleSelection from "./components/RoleSelection";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 import ErrorBoundary from "./components/ErrorBoundary";
+
 
 // Pages
 import Home from "./pages/Home";
@@ -23,18 +27,17 @@ import Feedback from "./pages/Feedback";
 import UserHistory from "./pages/UserHistory";
 import AdminDashboard from "./pages/AdminDashboard";
 
+
 import AdminFeedback from "./pages/AdminFeedback";
 import CommunityFeed from './pages/CommunityFeed';
 
 import Team from "./pages/Team";
 
 
+
 const App = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-
-
-
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -66,14 +69,11 @@ const App = () => {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen text-xl font-semibold">
-        Loading...
-      </div>
-    );
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
   return (
+
     <ErrorBoundary>
       <Router>
     
@@ -136,6 +136,51 @@ const App = () => {
         </div>
       </Router>
     </ErrorBoundary>
+
+    <Router>
+      <div className="flex flex-col min-h-screen w-full overflow-hidden">
+        
+        <Navbar user={user} />
+
+        <main className="flex-grow">
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<Home />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/feedback" element={<Feedback />} />
+            <Route path="/map" element={<MapPage />} />
+
+            {/* Auth Route: Redirect to Home if already logged in */}
+            <Route
+              path="/login"
+              element={!user ? <AuthPage /> : <Navigate to="/" replace />}
+            />
+
+            {/* Protected Route: Redirect to Login if not logged in */}
+            <Route
+              path="/scan"
+              element={
+                user ? (
+                  <CameraCapture user={user} />
+                ) : (
+                  <Navigate to="/login" state={{ from: "/scan" }} replace />
+                )
+              }
+            />
+
+            {/* User History */}
+            <Route path="/history" element={<UserHistory />} />
+
+            {/* Admin Routes */}
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/feedback" element={<AdminFeedback />} />
+          </Routes>
+        </main>
+
+        <FooterCard />
+      </div>
+    </Router>
+
   );
 };
 
