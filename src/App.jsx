@@ -123,6 +123,7 @@ import UserHistory from "./pages/UserHistory";
 import AdminFeedback from "./pages/AdminFeedback";
 import AdminDashboard from "./pages/AdminDashboard";
 import Team from "./pages/Team";
+import CommunityFeed from './pages/CommunityFeed';
 
 const App = () => {
   const [user, setUser] = useState(null);
@@ -160,7 +161,7 @@ const App = () => {
               <Route path="/feedback" element={<Feedback />} />
               <Route path="/map" element={<MapPage />} />
               <Route path="/team" element={<Team />} />
-
+              <Route path="/feed" element={<CommunityFeed />} />
               {/* Auth Routes */}
               <Route path="/login" element={!user ? <AuthPage /> : <Navigate to="/" replace />} />
               <Route path="/auth" element={!user ? <AuthPage /> : <Navigate to="/" replace />} />

@@ -1,14 +1,18 @@
+
+
+
 import React, { useEffect, useState } from 'react';
-import { fetchAllReports, updateReportStatus, uploadResolutionImage } from '../services/adminService';
-import { VerifyIssueResolved } from '../services/aiServices.js'; 
+import { fetchAllReports, updateReportStatus,uploadResolutionImage } from '../services/adminService';
+import { VerifyIssueResolved } from '../services/aiServices'; 
 import MapView from '../components/MapView'; 
 import exifr from 'exifr';
+
 
 const AdminDashboard = () => {
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // Verification Modal State
+    // --- VERIFICATION STATE ---
     const [showVerifyModal, setShowVerifyModal] = useState(false);
     const [selectedReportId, setSelectedReportId] = useState(null);
     const [selectedReportLocation, setSelectedReportLocation] = useState(null);
@@ -22,21 +26,68 @@ const AdminDashboard = () => {
     }, []);
 
     const loadReports = async () => {
-        try {
-            const data = await fetchAllReports();
-            const sortedData = data.sort((a, b) => {
-                if (b.severity !== a.severity) return b.severity - a.severity;
-                return new Date(b.created_at) - new Date(a.created_at);
-            });
-            setReports(sortedData);
-        } catch (e) {
-            console.error("Failed to load reports:", e);
-        } finally {
-            setLoading(false);
-        }
+        const data = await fetchAllReports();
+        // Sort by Severity first, then by Date (Newest first)
+        const sortedData = data.sort((a, b) => {
+            if (b.severity !== a.severity) return b.severity - a.severity;
+            return new Date(b.created_at) - new Date(a.created_at);
+        });
+        setReports(sortedData);
+        setLoading(false);
     };
 
-    // --- GPS DISTANCE LOGIC ---
+    const handleStatusChange = async (id, newStatus) => {
+        if (newStatus === 'Resolved') {
+            const report = reports.find(r => r.id == id);
+            
+            try {
+                const locObj = typeof report.location === 'string' 
+                    ? JSON.parse(report.location) 
+                    : report.location;
+                
+                setSelectedReportLocation(locObj);
+                setSelectedReportId(id);
+                setShowVerifyModal(true);
+                setVerifyFile(null);
+                setVerifyError("");
+                setVerifyStatus("");
+            } catch (e) {
+                alert("Error: Report location invalid.");
+            }
+            return; 
+        }
+        updateLocalReportStatus(id, newStatus);
+    };
+
+  const updateLocalReportStatus = async (
+  id,
+  newStatus,
+  resolvedDate = null,
+  resolutionImage = null
+) => {
+  setReports(prev =>
+    prev.map(r =>
+      r.id === id
+        ? {
+            ...r,
+            status: newStatus,
+            timestamptz: resolvedDate,
+            resolutionImage
+          }
+        : r
+    )
+  );
+
+  await updateReportStatus(
+    id,
+    newStatus,
+    resolvedDate,
+    resolutionImage
+  );
+};
+
+
+    // --- HELPER: GPS Math ---
     const getDistanceFromLatLonInMeters = (lat1, lon1, lat2, lon2) => {
         const R = 6371e3;
         const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -49,71 +100,68 @@ const AdminDashboard = () => {
         return R * c;
     };
 
-    const handleStatusChange = async (id, newStatus) => {
-        if (newStatus === 'Resolved') {
-            const report = reports.find(r => r.id == id);
-            try {
-                const locObj = typeof report.location === 'string' 
-                    ? JSON.parse(report.location) 
-                    : report.location;
-                setSelectedReportLocation(locObj);
-                setSelectedReportId(id);
-                setShowVerifyModal(true);
-            } catch (e) {
-                alert("Error: Report has invalid location data.");
-            }
-            return; 
-        }
-        updateLocalReportStatus(id, newStatus);
-    };
-
-    const updateLocalReportStatus = async (id, newStatus, resolvedDate = null, resolutionImage = null) => {
-        setReports(prev => prev.map(r => r.id === id ? {
-            ...r, 
-            status: newStatus, 
-            resolvedAt: resolvedDate, // Standardized key
-            resolutionImage 
-        } : r));
-
-        await updateReportStatus(id, newStatus, resolvedDate, resolutionImage);
-    };
-
+    // --- VERIFY FUNCTION ---
     const handleVerifySubmit = async () => {
         if (!verifyFile) return setVerifyError("Please upload a photo.");
+
         setVerifying(true);
-        setVerifyStatus("🛰️ Validating GPS Data...");
+        setVerifyError("");
+        setVerifyStatus("🛰️ Checking GPS Data...");
 
         try {
+            // 1. EXTRACT GPS
             const gps = await exifr.gps(verifyFile);
-            if (!gps || !gps.latitude) {
-                setVerifyError("❌ REJECTED: No GPS metadata found.");
+
+            if (!gps || !gps.latitude || !gps.longitude) {
+                setVerifying(false);
+                setVerifyError("❌ REJECTED: Image has no GPS data. Please use an original camera photo.");
                 return;
             }
 
+            // 2. CHECK DISTANCE
             const distance = getDistanceFromLatLonInMeters(
-                gps.latitude, gps.longitude,
-                selectedReportLocation.lat, selectedReportLocation.lng
+                gps.latitude,
+                gps.longitude,
+                selectedReportLocation.lat,
+                selectedReportLocation.lng
             );
 
-            if (distance > 300) { // Increased threshold to 300m
-                setVerifyError(`❌ Mismatch: Photo taken ${distance.toFixed(0)}m away.`);
+            if (distance > 200) {
+                setVerifying(false);
+                setVerifyError(`❌ Location Mismatch! Photo taken ${distance.toFixed(0)}m away.`);
                 return;
             }
 
-            setVerifyStatus("🧠 AI Checking Repair...");
+            // 3. AI CONTENT CHECK
+            setVerifyStatus("🧠 AI Analyzing Repair Quality...");
             const aiResult = await VerifyIssueResolved(verifyFile);
 
-            if (aiResult?.isResolved) {
+            if (aiResult && aiResult.isResolved) {
                 const resolvedDate = new Date().toISOString();
-                const resolutionImage = await uploadResolutionImage(verifyFile, selectedReportId);
-                await updateLocalReportStatus(selectedReportId, 'Resolved', resolvedDate, resolutionImage);
-                setShowVerifyModal(false);
-                alert("✅ Success: Issue resolved and verified.");
-            } else {
-                setVerifyError(`❌ AI Rejected: ${aiResult?.feedback || "No repair detected."}`);
-            }
+
+  // 🔹 Upload verified image to Supabase Storage
+                const resolutionImage = await uploadResolutionImage(
+                    verifyFile,
+                    selectedReportId
+                );
+
+  // 🔹 Update UI + Database with image + timestamp
+            await updateLocalReportStatus(
+                 selectedReportId,
+    'Resolved',
+    resolvedDate,
+    resolutionImage
+  );
+  setShowVerifyModal(false);
+  alert("✅ Verified, image saved, timestamp recorded.");
+} else {
+  setVerifyError(
+    `❌ AI Rejection: ${aiResult?.verificationNotes || "Image does not show a valid repair."}`
+  );
+}
         } catch (error) {
-            setVerifyError("⚠️ Verification Service Error.");
+            console.error("Verification Error", error);
+            setVerifyError("⚠️ Verification Service Error. Please try again.");
         } finally {
             setVerifying(false);
             setVerifyStatus("");
@@ -121,81 +169,224 @@ const AdminDashboard = () => {
     };
 
     const formatDate = (dateString) => {
-        if (!dateString) return <span className="text-gray-400">-</span>;
-        return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        if (!dateString) return <span className="text-gray-400 font-normal">-</span>;
+        return new Date(dateString).toLocaleString('en-US', {
+            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
     };
 
-    if (loading) return <div className="p-10 text-center">🔄 Loading Admin Portal...</div>;
+    if (loading) return <div className="p-10 text-center text-xl"> 🔄 Loading Government Portal...</div>;
 
     return (
-        <div className="min-h-screen bg-slate-50 p-6 pt-24"> {/* Added padding for Sticky Nav */}
-            <div className="max-w-7xl mx-auto">
-                <header className="mb-8 flex justify-between items-center">
-                    <h1 className="text-2xl font-bold text-slate-800">🏛️ CivicLens Admin</h1>
-                    <div className="bg-white px-4 py-2 rounded-lg shadow text-sm">Total: {reports.length}</div>
-                </header>
-
-                <div className="mb-8 bg-white p-4 rounded-xl shadow-md h-96">
-                    <MapView reports={reports} />
+        <div className="min-h-screen bg-gray-50 p-6 relative">
+             <header className="mb-8 flex justify-between items-center">
+                <div>
+                    <h1 className="text-3xl font-bold text-slate-800"> 🏛️ CivicLens Admin Portal</h1>
+                    <p className="text-slate-500">Government Dashboard for Issue Tracking</p>
                 </div>
+                <div className="bg-white px-4 py-2 rounded-lg shadow text-sm font-semibold text-slate-700">
+                    Total Reports: {reports.length}
+                </div>
+            </header>
 
-                <div className="bg-white rounded-xl shadow-md overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-slate-800 text-white text-sm">
-                            <tr>
+            <div className="mb-8 bg-white p-4 rounded-xl shadow-md">
+                <h2 className="text-xl font-bold mb-4 text-slate-700"> 📍 Live Incident Map</h2>
+                <MapView reports={reports} />
+            </div>
+
+            <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-slate-800 text-white">
                                 <th className="p-4">Evidence</th>
-                                <th className="p-4">Issue</th>
-                                <th className="p-4">Reported</th>
-                                <th className="p-4">Resolved</th>
-                                <th className="p-4">Status</th>
+                                <th className="p-4">Issue Details</th>
+                                <th className="p-4">Reported On</th>
+                                <th className="p-4">Resolved On</th>
+                                <th className="p-4">Resolution Proof</th>
+                                <th className="p-4">Location</th>
+                                <th className="p-4">Severity</th>
+                                <th className="p-4">AI Verification</th>
+                                <th className="p-4">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            {reports.map((report) => (
-                                <tr key={report.id} className="border-b hover:bg-slate-50">
-                                    <td className="p-4">
-                                        <img src={report.imageUrl} className="w-16 h-16 rounded object-cover" alt="issue" />
-                                    </td>
-                                    <td className="p-4">
-                                        <div className="font-bold">{report.issue}</div>
-                                        <div className="text-xs text-slate-400">ID: {report.id}</div>
-                                    </td>
-                                    <td className="p-4 text-sm">{formatDate(report.created_at)}</td>
-                                    <td className="p-4 text-sm">{formatDate(report.resolvedAt)}</td>
-                                    <td className="p-4">
-                                        <select 
-                                            value={report.status}
-                                            onChange={(e) => handleStatusChange(report.id, e.target.value)}
-                                            className="p-1 rounded border font-bold text-sm"
-                                        >
-                                            <option value="Pending">Pending</option>
-                                            <option value="In Progress">In Progress</option>
-                                            <option value="Resolved">Resolved</option>
-                                        </select>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
+                       <tbody>
+  {reports.map((report) => (
+    <tr
+      key={report.id}
+      className={`border-b hover:bg-gray-50 transition-colors ${
+        report.isSuspicious ? 'bg-red-50 border-l-4 border-red-500' : ''
+      }`}
+    >
+      {/* Evidence Image */}
+      <td className="p-4">
+        <a href={report.imageUrl} target="_blank" rel="noreferrer">
+          <img
+            src={report.imageUrl}
+            alt="Evidence"
+            className="w-20 h-20 object-cover rounded-lg border border-gray-200 hover:scale-105 transition-transform"
+          />
+        </a>
+      </td>
+
+      {/* Issue & Description */}
+      <td className="p-4 max-w-xs">
+        <p className="font-bold text-slate-800 text-lg">
+          {report.issue || "Report Details"}
+        </p>
+        <p className="text-sm text-slate-500 mt-1 line-clamp-2">
+          {report.description}
+        </p>
+        <p className="text-xs text-slate-400 mt-2">ID: {report.id}</p>
+      </td>
+
+      {/* Created Date */}
+      <td className="p-4 text-sm text-slate-600 whitespace-nowrap">
+        {formatDate(report.created_at || report.timestamp || report.createdAt)}
+      </td>
+
+      {/* Resolved Date */}
+     <td className="p-4 text-sm text-blue-600 font-bold whitespace-nowrap bg-blue-50/50">
+  {report.status === 'Resolved' && report.timestamptz ? (
+    formatDate(report.timestamptz)
+  ) : (
+    <span className="text-gray-400">-</span>
+  )}
+</td>
+
+
+      {/* 🔥 ADDED: Resolution Image Column */}
+      <td className="p-4">
+        {report.resolutionImage ? (
+          <div className="flex flex-col gap-1 items-center">
+            <img
+              src={report.resolutionImage}
+              alt="Resolution"
+              className="w-20 h-20 object-cover rounded-lg border border-gray-200 hover:scale-105 transition-transform"
+            />
+            <span className="text-xs text-gray-500">
+              {formatDate(report.timestamptz)}
+            </span>
+          </div>
+        ) : (
+          <span className="text-gray-400">—</span>
+        )}
+      </td>
+
+      {/* Location */}
+      <td className="p-4 text-sm text-slate-600 font-mono">
+        {(() => {
+          if (!report.location) return "Unknown";
+          if (typeof report.location === 'string' && report.location.includes('{')) {
+            try {
+              const parsedLoc = JSON.parse(report.location);
+              return parsedLoc.address
+                ? parsedLoc.address.substring(0, 20) + "..."
+                : "GPS Detected";
+            } catch {
+              return "Invalid Data";
+            }
+          }
+          return "Unknown";
+        })()}
+      </td>
+
+      {/* Severity */}
+      <td className="p-4">
+        <span
+          className={`px-3 py-1 rounded-full text-xs font-bold ${
+            report.severity >= 8
+              ? 'bg-red-100 text-red-700'
+              : report.severity >= 5
+              ? 'bg-orange-100 text-orange-700'
+              : 'bg-green-100 text-green-700'
+          }`}
+        >
+          {report.severity}/10
+        </span>
+      </td>
+
+      {/* Flagged / Verified */}
+      <td className="p-4">
+        {report.isSuspicious ? (
+          <div className="flex items-center gap-2 text-red-600 bg-red-100 px-3 py-2 rounded-lg">
+            <span>⚠️</span>
+            <span className="text-xs font-bold">FLAGGED</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-green-600 bg-green-50 px-3 py-2 rounded-lg border border-green-100">
+            <span>✅</span>
+            <span className="text-xs font-bold">Verified</span>
+          </div>
+        )}
+      </td>
+
+      {/* Status Dropdown */}
+      <td className="p-4">
+        <select
+          value={report.status}
+          onChange={(e) => handleStatusChange(report.id, e.target.value)}
+          className={`w-full p-2 rounded-lg border-2 font-bold text-sm cursor-pointer outline-none focus:ring-2 focus:ring-blue-400
+            ${
+              report.status === 'Resolved'
+                ? 'border-green-500 text-green-700 bg-green-50'
+                : report.status === 'In Progress'
+                ? 'border-blue-500 text-blue-700 bg-blue-50'
+                : 'border-orange-400 text-orange-700 bg-orange-50'
+            }`}
+        >
+          <option value="Pending">⏳ Pending</option>
+          <option value="In Progress">🚧 In Progress</option>
+          <option value="Resolved">✅ Resolved</option>
+        </select>
+      </td>
+    </tr>
+  ))}
+</tbody>
+
                     </table>
+                    {reports.length === 0 && <div className="p-10 text-center text-slate-400">No reports found.</div>}
                 </div>
             </div>
 
-            {/* MODAL OVERLAY */}
+            {/* VERIFICATION MODAL */}
             {showVerifyModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[2000]">
-                    <div className="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full">
-                        <h2 className="text-xl font-bold mb-4">📸 Verify Resolution</h2>
-                        <input 
-                            type="file" 
-                            accept="image/*" 
-                            onChange={(e) => setVerifyFile(e.target.files[0])}
-                            className="w-full mb-4"
-                        />
-                        {verifyStatus && <div className="text-blue-600 text-sm mb-2 animate-pulse">{verifyStatus}</div>}
-                        {verifyError && <div className="text-red-600 text-sm mb-2">{verifyError}</div>}
-                        <div className="flex justify-end gap-2">
-                            <button onClick={() => setShowVerifyModal(false)} className="px-4 py-2 text-slate-400">Cancel</button>
-                            <button onClick={handleVerifySubmit} disabled={verifying} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Verify</button>
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full animate-fade-in">
+                        <h2 className="text-2xl font-bold mb-2 text-slate-800">📸 Verification Required</h2>
+                        <p className="text-slate-600 mb-6">
+                            System will verify <b>GPS Location</b> and use <b>AI</b> to confirm the repair.
+                        </p>
+
+                        <div className="mb-6">
+                            <label className="block text-sm font-bold mb-2 text-slate-700">Upload Evidence</label>
+                            <input 
+                                type="file" 
+                                accept="image/*"
+                                onChange={(e) => setVerifyFile(e.target.files[0])}
+                                className="w-full p-2 border border-slate-300 rounded-lg"
+                            />
+                        </div>
+
+                        {verifyStatus && <div className="mb-4 p-3 bg-blue-50 text-blue-700 text-sm rounded-lg font-semibold animate-pulse border border-blue-200">{verifyStatus}</div>}
+                        {verifyError && <div className="mb-4 p-3 bg-red-100 text-red-700 text-sm rounded-lg font-semibold border border-red-200">{verifyError}</div>}
+
+                        <div className="flex justify-end gap-3">
+                            <button 
+                                onClick={() => setShowVerifyModal(false)}
+                                className="px-4 py-2 text-slate-600 font-bold hover:bg-slate-100 rounded-lg"
+                                disabled={verifying}
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                onClick={handleVerifySubmit}
+                                disabled={verifying || !verifyFile}
+                                className={`px-6 py-2 rounded-lg font-bold text-white transition-all
+                                ${verifying ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 shadow-lg'}`}
+                            >
+                                {verifying ? 'Verifying...' : 'Verify & Resolve'}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -203,5 +394,4 @@ const AdminDashboard = () => {
         </div>
     );
 };
-
 export default AdminDashboard;
