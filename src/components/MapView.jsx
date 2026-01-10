@@ -92,7 +92,7 @@ const MapView = ({ reports = [] }) => {
                         />
                     )}
 
-                    <p className="text-xs text-slate-600 line-clamp-3">
+                    <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-3">
                         {report.description}
                     </p>
                   </div>

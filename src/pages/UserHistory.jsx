@@ -4,14 +4,15 @@ import { auth } from '../services/firebase';
 import ReportCard from '../components/ReportCard';
 import { Link } from 'react-router-dom';
 import { LayoutDashboard, Plus, Filter } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const UserHistory = () => {
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('All'); 
     
-    // Toast State for Delete Confirmation
-    const [showToast, setShowToast] = useState(false); 
+    
+    const [showToast, setShowToast] = useState(false);
 
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -154,17 +155,18 @@ const UserHistory = () => {
             </div>
 
             {/* Success Toast */}
-            {showToast && (
-                <div className="fixed bottom-6 right-6 bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 animate-bounce-up z-50">
-                    <div className="bg-red-500 rounded-full p-1">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
-                    </div>
-                    <span className="font-medium">Report Deleted Successfully</span>
-                </div>
-            )}
+{showToast && (
+    // CHANGED z-50 to z-[9999]
+    <div className="fixed bottom-6 right-6 bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 animate-bounce-up z-[9999]">
+        <div className="bg-red-500 rounded-full p-1">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+        </div>
+        <span className="font-medium">Report Deleted Successfully</span>
+    </div>
+)}
         </div>
     );
 };
