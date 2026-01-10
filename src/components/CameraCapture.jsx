@@ -4,7 +4,7 @@ import { uploadImageToStorage, saveReport } from '../services/reportService';
 import { auth } from '../services/firebase';
 import { useNavigate } from 'react-router-dom';
 import imageCompression from 'browser-image-compression';
-import { MapPin, Edit2, CheckCircle, RotateCcw, X } from 'lucide-react'; 
+import { MapPin, CheckCircle, RotateCcw, X, AlertTriangle, Search } from 'lucide-react'; 
 
 const CameraCapture = () => {
     const navigate = useNavigate();
@@ -30,6 +30,10 @@ const CameraCapture = () => {
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [pincode, setPincode] = useState("");
     const [detectedAddress, setDetectedAddress] = useState("Fetching location...");
+    
+    // --- NEW: Strict Validation State ---
+    const [isAddressVerified, setIsAddressVerified] = useState(false); 
+    const [finalCoords, setFinalCoords] = useState({ lat: 0, lng: 0 });
 
     // --- HANDLE IMAGE UPLOAD ---
     const handleUpload = async (e) => {
@@ -50,13 +54,9 @@ const CameraCapture = () => {
             setImage(URL.createObjectURL(compressedFile));
             setImageFile(compressedFile);
             
-            // AI Analysis
             const data = await ImageAnalysis(compressedFile);
             
-            if (!isAnalysisActive.current) {
-                setLoading(false);
-                return; 
-            }
+            if (!isAnalysisActive.current) { setLoading(false); return; }
 
             if (!data || !data.issue || data.issue === "Unclear") {
                 alert("⚠️ Image Unclear. Please try again.");
@@ -76,7 +76,6 @@ const CameraCapture = () => {
         setLoading(false);
     };
 
-    // --- HANDLE RETAKE ---
     const handleRetake = () => {
         isAnalysisActive.current = false;
         setImage(null);
@@ -85,6 +84,7 @@ const CameraCapture = () => {
         setManualSeverity(0);
         setLocationMode('auto');
         setManualAddress("");
+        setIsAddressVerified(false); // Reset validation
         setLoading(false);       
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
@@ -92,7 +92,9 @@ const CameraCapture = () => {
     // --- ADDRESS SEARCH FUNCTIONS ---
     const handleManualInputChange = (e) => {
         setManualAddress(e.target.value);
-        setLocationMode('manual'); // Reset to manual if typing
+        setLocationMode('manual'); 
+        setIsAddressVerified(false); // CRITICAL: Invalidates address if user types
+        setFinalCoords({ lat: 0, lng: 0 });
     };
 
     useEffect(() => {
@@ -101,8 +103,12 @@ const CameraCapture = () => {
             setShowSuggestions(false);
             return;
         }
+        // Only search if user hasn't selected a valid one yet
+        if(isAddressVerified) return;
+
         const delaySearch = setTimeout(async () => {
             try {
+                // Added '&countrycodes=in' to limit to India for better accuracy
                 const response = await fetch(
                     `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(manualAddress)}&addressdetails=1&limit=5&countrycodes=in`
                 );
@@ -112,9 +118,9 @@ const CameraCapture = () => {
             } catch (error) {
                 console.error("Search failed:", error);
             }
-        }, 1000);
+        }, 800); // Increased delay slightly to reduce API calls
         return () => clearTimeout(delaySearch);
-    }, [manualAddress]);
+    }, [manualAddress, isAddressVerified]);
 
     const selectSuggestion = (item) => {
         setManualAddress(item.display_name);
@@ -124,24 +130,19 @@ const CameraCapture = () => {
         } else {
             setPincode("");
         }
-    
-        setReport(prev => ({
-            ...prev,
-            location: {
-                lat: parseFloat(item.lat),
-                lng: parseFloat(item.lon),
-                address: item.display_name
-            }
-        }));
+        
+        setFinalCoords({
+            lat: parseFloat(item.lat),
+            lng: parseFloat(item.lon)
+        });
+
+        setIsAddressVerified(true); // CRITICAL: Mark as Valid
         setLocationMode('manual_success'); 
     };
 
-    // --- DETECT LOCATION ---
+    // --- GPS Logic ---
     const detectLocation = () => {
-        if (!("geolocation" in navigator)) {
-            setLocationMode('manual');
-            return;
-        }
+        if (!("geolocation" in navigator)) { setLocationMode('manual'); return; }
         setLocationMode('detecting');
         
         navigator.geolocation.getCurrentPosition(
@@ -150,13 +151,14 @@ const CameraCapture = () => {
                 const lng = position.coords.longitude;
                 const address = await getAddressFromCoordinates(lat, lng);
                 setDetectedAddress(address);
+                setFinalCoords({ lat, lng });
                 setLocationMode('success');
             },
             (error) => {
                 console.warn("GPS Error:", error);
                 setLocationMode('manual');
             },
-            { enableHighAccuracy: true, timeout: 10000 }
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
         );
     };
 
@@ -172,116 +174,44 @@ const CameraCapture = () => {
         }
     };
 
-    // --- HANDLE SUBMIT  ---
+    // --- SUBMIT LOGIC ---
     const handleSubmit = async () => {
-        // 1. Validation Checks
         if (!auth.currentUser) return alert("Please Login!");
         if (manualSeverity < 4) return alert("Severity must be 4+ to report.");
 
-        const aiScore = report?.severity || 0;
-        const mismatch = Math.abs(aiScore - manualSeverity);
-        
-        if (mismatch > 4) {
-             const confirmSubmit = window.confirm(
-                `⚠️ SUSPICIOUS REPORT WARNING ⚠️\n\n🤖 AI Rated: ${aiScore}/10\n👤 You Rated: ${manualSeverity}/10\n\nThis huge difference flags your report as suspicious.\n\nDo you still want to submit?`
-            );
-            if (!confirmSubmit) return; 
+        // --- NEW STRICT VALIDATION ---
+        if (locationMode === 'manual' && !isAddressVerified) {
+            alert("⚠️ Please select a valid address from the dropdown suggestions.\n\nWe need exact coordinates to map this issue.");
+            return;
         }
-
-        if (locationMode === 'manual') {
-            if (manualAddress.length < 3) return alert("Please enter a valid address");
-            // Optional: You can make pincode strictly required or optional here
-             if (pincode.length < 6) return alert("Please enter a valid 6-digit Pincode");
+        if (locationMode === 'manual' && manualAddress.length < 5) {
+            alert("Please enter a longer address to search.");
+            return;
         }
+        // -----------------------------
 
         setIsSubmitting(true);
         setLoadingText("Submitting...");
 
         try {
-            // 2. Upload Image
             const imageUrl = await uploadImageToStorage(imageFile);
             
-            // 3. Smart Location Logic
-            let finalLocation = null;
-            let locationPrecision = 'manual_text';
+            // Logic is simpler now because we force coords
+            let submissionLocation = {
+                lat: finalCoords.lat,
+                lng: finalCoords.lng,
+                address: locationMode === 'success' ? detectedAddress : manualAddress + (pincode ? ` - ${pincode}` : "")
+            };
 
-            // CASE A: Manual Text Only
-            if (locationMode === 'manual') {
-                const proceed = window.confirm(
-                    "⚠️ GPS Warning\n\nWe cannot verify the exact GPS coordinates for this address.\n" +
-                    "The admin validation check will be disabled for this report.\n\n" +
-                    "Proceed anyway?"
-                );
-                if (!proceed) { setIsSubmitting(false); return; }
-
-                finalLocation = { 
-                    lat: 0, 
-                    lng: 0, 
-                    address: manualAddress + (pincode ? `, ${pincode}` : "") 
-                };
-                locationPrecision = 'manual_text';
-            }
-            
-            // CASE B: Valid Suggestion (Green Check)
-            else if (locationMode === 'manual_success') {
-                 finalLocation = {
-                    lat: report.location.lat, 
-                    lng: report.location.lng,
-                    address: manualAddress + (pincode ? `, ${pincode}` : "") 
-                };
-                locationPrecision = 'precise';
-            }
-
-            // CASE C: GPS Auto-Detect
-            else {
-                 try {
-                     const position = await new Promise((resolve, reject) => 
-                        navigator.geolocation.getCurrentPosition(
-                            resolve, reject, 
-                            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                        )
-                    );
-                    
-                    // Accuracy Check
-                    const accuracy = position.coords.accuracy;
-                    if (accuracy > 2000) {
-                        alert(`⚠️ GPS Signal Weak (Accuracy: ±${Math.round(accuracy)}m).\n\nYour device is using a rough location (likely IP-based).\n\nPlease search for your address manually.`);
-                        setIsSubmitting(false);
-                        setLocationMode('manual');
-                        return;
-                    }
-
-                    const realAddress = await getAddressFromCoordinates(
-                        position.coords.latitude, 
-                        position.coords.longitude
-                    );
-
-                    finalLocation = { 
-                        lat: position.coords.latitude, 
-                        lng: position.coords.longitude, 
-                        address: realAddress 
-                    };
-                    locationPrecision = 'precise';
-
-                } catch (gpsError) {
-                    alert("GPS Failed. Please enter location manually.");
-                    setIsSubmitting(false);
-                    setLocationMode('manual');
-                    return;
-                }
-            }
-
-            // 4. Save to Database
             await saveReport({
                 userId: auth.currentUser.uid,
                 imageUrl,
                 issue: report.issue,
                 description: report.description,
                 severity: manualSeverity,
-                location: finalLocation,
-                location_precision: locationPrecision,
+                location: submissionLocation,
+                location_precision: 'precise', // It is always precise now
                 status: 'Pending',
-                isSuspicious: mismatch > 4,
                 timestamp: new Date().toISOString()
             });
 
@@ -296,48 +226,29 @@ const CameraCapture = () => {
 
     return (
         <div className="fixed inset-0 bg-gray-900/90 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-6">
-            
             <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-fade-in-up">
                 
-                {/* HEADER */}
+                {/* Header */}
                 <div className="bg-blue-600 p-4 flex justify-between items-center shrink-0">
-                    <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                        📸 New Report
-                    </h2>
-                    <button onClick={() => navigate('/')} className="bg-white/20 p-2 rounded-full hover:bg-white/30 text-white transition">
-                        <X size={18} />
-                    </button>
+                    <h2 className="text-lg font-bold text-white flex items-center gap-2">📸 New Report</h2>
+                    <button onClick={() => navigate('/')} className="bg-white/20 p-2 rounded-full hover:bg-white/30 text-white transition"><X size={18} /></button>
                 </div>
 
-                {/* SCROLLABLE BODY */}
                 <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar">
-                    
-                    {/* Image Preview Area */}
+                    {/* Image Preview */}
                     <div className="relative w-full h-56 bg-gray-100 rounded-xl overflow-hidden border border-gray-200 group">
                         {image ? (
                             <>
                                 <img src={image} className="w-full h-full object-cover" alt="Preview" />
-                                <button 
-                                    onClick={handleRetake}
-                                    className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-md transition-all flex items-center gap-1 shadow-md z-20 border border-white/20"
-                                >
-                                    <RotateCcw size={12} /> Retake
-                                </button>
+                                <button onClick={handleRetake} className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-md transition-all flex items-center gap-1 shadow-md z-20 border border-white/20"><RotateCcw size={12} /> Retake</button>
                             </>
                         ) : (
                             <label className="flex flex-col items-center justify-center h-full cursor-pointer hover:bg-gray-50 transition active:scale-95">
                                 <span className="text-4xl mb-2">📷</span>
                                 <span className="text-sm text-gray-500 font-medium">Tap to Snap Photo</span>
-                                <input 
-                                    type="file" 
-                                    accept="image/*" 
-                                    className="hidden" 
-                                    onChange={handleUpload} 
-                                    ref={fileInputRef} 
-                                />
+                                <input type="file" accept="image/*" className="hidden" onChange={handleUpload} ref={fileInputRef} />
                             </label>
                         )}
-                        
                         {loading && (
                             <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center z-30">
                                 <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-600 border-t-transparent"></div>
@@ -346,171 +257,83 @@ const CameraCapture = () => {
                         )}
                     </div>
 
-                    {/* REPORT DETAILS SECTION */}
                     {report && (
                         <div className="animate-fade-in space-y-6">
-                            
                             {/* AI Findings */}
                             <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 shadow-sm">
                                 <div className="flex justify-between items-start">
                                     <h3 className="font-bold text-gray-900">{report.issue}</h3>
-                                    <span className="bg-blue-200 text-blue-800 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wide border border-blue-200">
-                                        AI Detected
-                                    </span>
+                                    <span className="bg-blue-200 text-blue-800 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wide border border-blue-200">AI Detected</span>
                                 </div>
                                 <p className="text-sm text-gray-600 mt-2 leading-relaxed">{report.description}</p>
                             </div>
 
-                            {/* SEVERITY SLIDER */}
+                            {/* Severity */}
                             <div className="pb-2">
                                 <div className="flex justify-between items-end mb-2">
                                     <label className="text-xs font-bold uppercase text-gray-500 tracking-wider">Severity Level</label>
-                                    <div className="text-right">
-                                        <span className="text-[10px] text-gray-400 block mb-0.5">AI Recommended</span>
-                                        <div className="flex items-center justify-end gap-1">
-                                            <span className="text-blue-600 font-bold text-xl">{report.severity}</span>
-                                            <span className="text-gray-400 text-sm">/10</span>
-                                        </div>
-                                    </div>
+                                    <span className="text-blue-600 font-bold text-xl">{manualSeverity}<span className="text-gray-400 text-sm">/10</span></span>
                                 </div>
-                                
-                                <div className="relative h-8 flex items-center">
-                                    <input 
-                                        type="range" min="1" max="10" 
-                                        value={manualSeverity} 
-                                        onChange={(e) => setManualSeverity(parseInt(e.target.value))}
-                                        className="w-full h-2 bg-gray-200 rounded-lg accent-blue-600 cursor-pointer z-10 relative"
-                                    />
-                                    <div 
-                                        className="absolute top-0 w-0.5 h-full bg-blue-400/50 z-0 pointer-events-none"
-                                        style={{ left: `${(report.severity - 1) * 11}%` }} 
-                                    >
-                                        <span className="absolute -top-5 -left-1.5 text-xs animate-bounce">🤖</span>
-                                    </div>
-                                </div>
-                                
-                                <div className="flex justify-between mt-1">
-                                    <span className="text-[10px] text-gray-400 font-medium">Low Priority</span>
-                                    <span className={`text-xs font-bold ${manualSeverity > 7 ? "text-red-500" : "text-blue-600"}`}>
-                                        Your Rating: {manualSeverity}
-                                    </span>
-                                    <span className="text-[10px] text-gray-400 font-medium">High Priority</span>
-                                </div>
+                                <input type="range" min="1" max="10" value={manualSeverity} onChange={(e) => setManualSeverity(parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg accent-blue-600 cursor-pointer z-10 relative" />
+                                <div className="flex justify-between mt-1"><span className="text-[10px] text-gray-400">Low</span><span className="text-[10px] text-gray-400">High</span></div>
                             </div>
 
-                            {/* LOCATION SECTION */}
+                            {/* Location Section */}
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Location Details</label>
                                 
-                                {/* 1. DETECTING STATE */}
                                 {locationMode === 'detecting' && (
-                                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 text-gray-500 animate-pulse">
-                                        <MapPin size={18} />
-                                        <span className="text-sm font-medium">Acquiring GPS...</span>
-                                    </div>
+                                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 text-gray-500 animate-pulse"><MapPin size={18} /><span className="text-sm font-medium">Acquiring GPS...</span></div>
                                 )}
 
-                                {/* 2. SUCCESS GPS STATE */}
                                 {locationMode === 'success' && (
                                     <div className="p-3 bg-green-50 rounded-lg border border-green-200 shadow-sm flex items-center justify-between">
                                         <div className="overflow-hidden">
-                                            <div className="flex items-center gap-2 text-green-700 mb-0.5">
-                                                <CheckCircle size={14} />
-                                                <span className="text-xs font-bold uppercase">GPS Locked</span>
-                                            </div>
-                                            <p className="text-xs text-gray-600 font-medium truncate max-w-[200px]" title={detectedAddress}>
-                                                {detectedAddress}
-                                            </p>
+                                            <div className="flex items-center gap-2 text-green-700 mb-0.5"><CheckCircle size={14} /><span className="text-xs font-bold uppercase">GPS Locked</span></div>
+                                            <p className="text-xs text-gray-600 font-medium truncate max-w-[200px]">{detectedAddress}</p>
                                         </div>
-                                        <button 
-                                            onClick={() => setLocationMode('manual')}
-                                            className="text-xs text-blue-600 underline shrink-0 font-medium px-2 py-1 hover:bg-blue-50 rounded"
-                                        >
-                                            Edit
-                                        </button>
+                                        <button onClick={() => setLocationMode('manual')} className="text-xs text-blue-600 underline font-medium px-2 py-1">Edit</button>
                                     </div>
                                 )}
 
-                                {/* 3. MANUAL INPUT STATE */}
-                                {locationMode === 'manual' && (
+                                {(locationMode === 'manual' || locationMode === 'manual_success') && (
                                     <div className="relative animate-fade-in space-y-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
                                         <div className="relative">
-                                            <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Address / Landmark</label>
+                                            <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Search Address</label>
                                             <div className="relative">
-                                                <MapPin size={16} className="absolute left-3 top-3 text-blue-500" />
+                                                <Search size={16} className="absolute left-3 top-3 text-gray-400" />
                                                 <input 
-                                                    type="text"
-                                                    value={manualAddress}
-                                                    onChange={handleManualInputChange}
-                                                    placeholder="Search area (e.g. Civil Lines)"
-                                                    className="w-full pl-9 pr-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm shadow-sm"
-                                                    autoFocus
+                                                    type="text" 
+                                                    value={manualAddress} 
+                                                    onChange={handleManualInputChange} 
+                                                    placeholder="e.g. MNNIT, Teliyarganj" 
+                                                    className={`w-full pl-9 pr-4 py-2 bg-white border rounded-lg focus:ring-2 outline-none text-sm shadow-sm 
+                                                        ${!isAddressVerified && manualAddress.length > 2 ? 'border-red-300 focus:ring-red-200' : 'border-gray-300 focus:ring-blue-500'}`}
+                                                    autoFocus 
                                                 />
-                                                {/* Suggestions Dropdown */}
+                                                {/* Suggestions List */}
                                                 {showSuggestions && suggestions.length > 0 && (
                                                     <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto mt-1">
                                                         {suggestions.map((item, index) => (
-                                                            <div 
-                                                                key={index}
-                                                                onClick={() => selectSuggestion(item)}
-                                                                className="p-2.5 hover:bg-blue-50 cursor-pointer border-b border-gray-100 flex items-start gap-2"
-                                                            >
-                                                                <MapPin size={14} className="text-gray-400 mt-1 shrink-0" />
+                                                            <div key={index} onClick={() => selectSuggestion(item)} className="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 flex items-start gap-2">
+                                                                <MapPin size={16} className="text-gray-400 mt-0.5 shrink-0" />
                                                                 <div>
-                                                                    <p className="text-sm font-medium text-gray-800 line-clamp-1">
-                                                                        {item.name || item.address.road || "Location"}
-                                                                    </p>
-                                                                    <p className="text-[10px] text-gray-500 line-clamp-1">{item.display_name}</p>
+                                                                    <p className="text-sm font-bold text-gray-800 line-clamp-1">{item.name || item.address.road || "Location"}</p>
+                                                                    <p className="text-xs text-gray-500 line-clamp-1">{item.display_name}</p>
                                                                 </div>
                                                             </div>
                                                         ))}
                                                     </div>
                                                 )}
                                             </div>
+                                            {/* Validation Message */}
+                                            {locationMode === 'manual' && !isAddressVerified && manualAddress.length > 0 && (
+                                                <p className="text-[10px] text-red-500 mt-1 font-semibold flex items-center gap-1">
+                                                    <AlertTriangle size={10}/> Please select an option from the list to verify coordinates.
+                                                </p>
+                                            )}
                                         </div>
-                                        
-                                        {/* Pincode Field */}
-                                        <div>
-                                            <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Pincode</label>
-                                            <div className="relative">
-                                                <span className="absolute left-3 top-2.5 text-gray-400 text-xs font-bold">#</span>
-                                                <input 
-                                                    type="tel" 
-                                                    maxLength="6"
-                                                    value={pincode}
-                                                    onChange={(e) => {
-                                                        const val = e.target.value.replace(/\D/g, ''); 
-                                                        if (val.length <= 6) setPincode(val);
-                                                    }}
-                                                    placeholder="226001"
-                                                    className="w-full pl-9 pr-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm shadow-sm font-mono tracking-wide"
-                                                />
-                                            </div>
-                                        </div>
-                                        
-                                        <p className="text-[10px] text-gray-400 text-center pt-1">
-                                            *Address & Pincode required when GPS fails.
-                                        </p>
-                                    </div>
-                                )}
-
-                                {/* 4. MANUAL SUCCESS STATE */}
-                                {locationMode === 'manual_success' && (
-                                    <div className="p-3 bg-green-50 rounded-lg border border-green-200 shadow-sm flex items-center justify-between">
-                                        <div className="overflow-hidden">
-                                            <div className="flex items-center gap-2 text-green-700 mb-0.5">
-                                                <CheckCircle size={14} />
-                                                <span className="text-xs font-bold uppercase">Location Set</span>
-                                            </div>
-                                            <p className="text-xs text-gray-600 truncate max-w-[200px] font-medium">{manualAddress}</p>
-                                            {pincode && <p className="text-[10px] text-gray-500">Pincode: {pincode}</p>}
-                                        </div>
-                                        <button 
-                                            onClick={() => { setLocationMode('manual'); setManualAddress(''); setPincode(''); }}
-                                            className="text-xs text-blue-600 underline shrink-0 font-medium px-2 py-1 hover:bg-blue-50 rounded"
-                                        >
-                                            Change
-                                        </button>
+                                        {isAddressVerified && <div className="text-xs text-green-600 font-bold flex items-center gap-1 mt-1"><CheckCircle size={12}/> Address Verified</div>}
                                     </div>
                                 )}
                             </div>
@@ -518,29 +341,17 @@ const CameraCapture = () => {
                     )}
                 </div>
 
-                {/* FOOTER */}
                 {report && (
-                    <div className="p-4 border-t border-gray-100 bg-white shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-                        <button
-                            onClick={handleSubmit}
-                            disabled={isSubmitting}
-                            className={`w-full py-3.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2
-                                ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 hover:scale-[1.02] active:scale-95'}
-                            `}
-                        >
-                            {isSubmitting ? 'Sending Report...' : '🚀 Submit Report'}
+                    <div className="p-4 border-t border-gray-100 bg-white shrink-0">
+                        <button onClick={handleSubmit} disabled={isSubmitting} className={`w-full py-3.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${isSubmitting ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'}`}>
+                            {isSubmitting ? 'Sending...' : '🚀 Submit Report'}
                         </button>
                     </div>
                 )}
             </div>
-
-            {/* Success Toast */}
             {showToast && (
                 <div className="absolute top-6 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 animate-fade-in-up z-[60]">
-                    <div className="bg-green-500 rounded-full p-1">
-                        <CheckCircle size={16} className="text-white" />
-                    </div>
-                    <span className="font-medium">Report Submitted Successfully!</span>
+                    <CheckCircle size={16} className="text-green-500" /> <span className="font-medium">Report Submitted!</span>
                 </div>
             )}
         </div>

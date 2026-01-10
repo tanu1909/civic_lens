@@ -22,6 +22,7 @@ const Navbar = ({ user }) => {
     } else {
       navigate('/login', { state: { from: '/scan' } });
     }
+    setIsOpen(false); // Close mobile menu if open
   };
 
   const handleLogout = async () => {
@@ -29,6 +30,7 @@ const Navbar = ({ user }) => {
       await signOut(auth);
       toast.success('Logged out successfully');
       navigate('/');
+      setIsOpen(false);
     } catch (error) {
       toast.error('Error logging out');
     }
@@ -66,15 +68,22 @@ const Navbar = ({ user }) => {
                 )}
               </NavLink>
             </li>
-         
-         {/* CONDITIONAL RENDERING BASED ON ROLE */}
-         {user?.role === 'official' && (
+            
+            {/* Community Feed Link */}
             <li>
-              <NavLink to="/admin" className={navLinkStyles}>Admin Dashboard</NavLink>
+                <NavLink to="/community" className={navLinkStyles}>Community Feed</NavLink>
             </li>
-            )}
+
+            {/* User History Link (Only if logged in) */}
             {user && (
-               <li><NavLink to="/history" className={navLinkStyles}>Reports</NavLink></li>
+               <li><NavLink to="/history" className={navLinkStyles}>My Reports</NavLink></li>
+            )}
+            
+            {/* Admin Dashboard (Only for officials) */}
+            {user?.role === 'official' && (
+              <li>
+                <NavLink to="/admin" className={navLinkStyles}>Admin Dashboard</NavLink>
+              </li>
             )}
           </ul>
 
@@ -95,6 +104,7 @@ const Navbar = ({ user }) => {
               <button 
                 onClick={handleLogout}
                 className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                title="Logout"
               >
                 <LogOut size={20} />
               </button>
@@ -108,20 +118,56 @@ const Navbar = ({ user }) => {
         </div>
       </div>
 
-      {/* MOBILE MENU */}
+      {/* MOBILE MENU (Fixed & Cleaned) */}
       {isOpen && (
-        <div className="mt-2 mx-auto max-w-7xl md:hidden bg-white/95 backdrop-blur-xl border border-slate-100 p-6 rounded-2xl shadow-2xl space-y-4">
-          <ul className="flex flex-col gap-4 text-sm font-semibold">
-            <li><NavLink to="/" onClick={() => setIsOpen(false)}>Home</NavLink></li>
-            <li><NavLink to="/admin" onClick={() => setIsOpen(false)}>Admin Dashboard</NavLink></li>
-            <li><NavLink to="/history" onClick={() => setIsOpen(false)}> Reports</NavLink></li>
+        <div className="absolute top-full left-4 right-4 mt-2 md:hidden bg-white/95 backdrop-blur-xl border border-slate-100 p-6 rounded-2xl shadow-2xl z-[60] animate-in slide-in-from-top-2 fade-in duration-200">
+          <ul className="flex flex-col gap-4 text-sm font-semibold text-slate-600">
+            <li>
+              <NavLink to="/" onClick={() => setIsOpen(false)} className={({ isActive }) => isActive ? "text-blue-600" : ""}>
+                Home
+              </NavLink>
+            </li>
+            
+            <li>
+              <NavLink to="/community" onClick={() => setIsOpen(false)} className={({ isActive }) => isActive ? "text-blue-600" : ""}>
+                Community Feed
+              </NavLink>
+            </li>
+
+            {user && (
+              <li>
+                <NavLink to="/history" onClick={() => setIsOpen(false)} className={({ isActive }) => isActive ? "text-blue-600" : ""}>
+                  My Reports
+                </NavLink>
+              </li>
+            )}
+            
+            {user?.role === 'official' && (
+              <li>
+                <NavLink to="/admin" onClick={() => setIsOpen(false)} className={({ isActive }) => isActive ? "text-blue-600" : ""}>
+                  Admin Dashboard
+                </NavLink>
+              </li>
+            )}
           </ul>
-          <button 
-            onClick={() => { setIsOpen(false); handleShareClick(); }}
-            className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl"
-          >
-            {user ? 'Share Issues' : 'Login to Share'}
-          </button>
+
+          <div className="mt-6 pt-6 border-t border-slate-100 space-y-3">
+            <button 
+              onClick={handleShareClick}
+              className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-200 active:scale-95 transition-all"
+            >
+              {user ? 'Share Issues' : 'Login to Share'}
+            </button>
+            
+            {user && (
+               <button 
+                 onClick={handleLogout}
+                 className="w-full py-3 bg-red-50 text-red-600 font-bold rounded-xl active:scale-95 transition-all"
+               >
+                 Logout
+               </button>
+            )}
+          </div>
         </div>
       )}
     </nav>
