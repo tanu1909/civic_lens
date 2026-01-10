@@ -15,7 +15,7 @@ const ReportCard = ({ report ,onDelete}) => {
     const date = new Date(report.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
     return (
-        <div className='group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col h-full'>
+        <div className='group bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300  flex flex-col h-full'>
             
             {/* Image Header */}
             <div className='h-48 overflow-hidden relative bg-gray-100'>
@@ -33,7 +33,7 @@ const ReportCard = ({ report ,onDelete}) => {
                         e.stopPropagation(); // Preventing clicking the card itself
                         onDelete();
                         }}
-                    className="absolute top-3 left-3 bg-white/90 p-1.5 rounded-full text-red-500 hover:bg-red-50 hover:text-red-700 transition-colors shadow-sm z-10"
+                    className="absolute top-3 left-3 bg-white dark:bg-slate-900/90 p-1.5 rounded-full text-red-500 hover:bg-red-50 hover:text-red-700 transition-colors shadow-sm z-10"
                     title="Delete Report"
                     >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -43,7 +43,7 @@ const ReportCard = ({ report ,onDelete}) => {
                     </svg>
                     </button>
                 )}
-                <div className='absolute top-3 right-3 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold shadow-sm flex items-center gap-1 text-gray-600'>
+                <div className='absolute top-3 right-3 bg-white dark:bg-slate-900/95 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold shadow-sm flex items-center gap-1 text-gray-600'>
                     <Calendar size={12} />
                     {date}
                 </div>

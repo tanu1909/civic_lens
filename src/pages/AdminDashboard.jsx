@@ -179,17 +179,17 @@ const AdminDashboard = () => {
                     <h1 className="text-3xl font-bold text-slate-800"> 🏛️ CivicLens Admin Portal</h1>
                     <p className="text-slate-500">Government Dashboard for Issue Tracking</p>
                 </div>
-                <div className="bg-white px-4 py-2 rounded-lg shadow text-sm font-semibold text-slate-700">
+                <div className="bg-white dark:bg-slate-900 px-4 py-2 rounded-lg shadow text-sm font-semibold text-slate-700">
                     Total Reports: {reports.length}
                 </div>
             </header>
 
-            <div className="mb-8 bg-white p-4 rounded-xl shadow-md">
+            <div className="mb-8 bg-white dark:bg-slate-900 p-4 rounded-xl shadow-md">
                 <h2 className="text-xl font-bold mb-4 text-slate-700"> 📍 Live Incident Map</h2>
                 <MapView reports={reports} />
             </div>
 
-            <div className="bg-white rounded-xl shadow-md overflow-hidden">
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-md overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
@@ -238,6 +238,10 @@ const AdminDashboard = () => {
                                     {/* Created Date */}
                                     <td className="p-4 text-sm text-slate-600 whitespace-nowrap">
                                         {formatDate(report.created_at || report.timestamp || report.createdAt)}
+                                    
+                                    {/* 🔥 FIXED: Now checking 'created_at' to match Supabase */}
+                                    <td className="p-4 text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                                        {formatDate(report.created_at || report.timestamp)}
                                     </td>
 
                                     {/* Resolved Date */}
