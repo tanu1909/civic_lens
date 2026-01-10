@@ -70,7 +70,7 @@
 
 //   return (
 //     <div className="min-h-[80vh] flex items-center justify-center px-4">
-//       <div className="max-w-md w-full bg-white rounded-2xl p-8 border border-slate-100 transition-all duration-300 ease-out hover:scale-[1.02] hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(37,_99,_235,_0.4)]">
+//       <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-2xl p-8 border border-slate-100 transition-all duration-300 ease-out hover:scale-[1.02] hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(37,_99,_235,_0.4)]">
         
 //         <div className="text-center mb-8">
 //           <h2 className="text-3xl font-bold text-slate-900">
@@ -97,7 +97,7 @@
 //                 type="text" 
 //                 placeholder="Full Name"
 //                 onChange={(e) => setFullName(e.target.value)}
-//                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+//                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
 //                 required
 //               />
 //             </div>
@@ -110,7 +110,7 @@
 //               placeholder="Email Address"
 //               value={email}
 //               onChange={(e) => setEmail(e.target.value)}
-//               className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+//               className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
 //               required
 //             />
 //           </div>
@@ -122,14 +122,14 @@
 //               placeholder="Password"
 //               value={password}
 //               onChange={(e) => setPassword(e.target.value)}
-//               className="w-full pl-10 pr-12 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+//               className="w-full pl-10 pr-12 py-2.5 bg-slate-50 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
 //               required
 //             />
 //             {/* Visibility Toggle Button */}
 //             <button
 //               type="button"
 //               onClick={() => setShowPassword(!showPassword)}
-//               className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 transition-colors"
+//               className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 dark:text-slate-400 transition-colors"
 //             >
 //               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
 //             </button>
@@ -147,15 +147,15 @@
 
 //         <div className="mt-6">
 //           <div className="relative flex items-center justify-center mb-6">
-//             <div className="border-t border-slate-200 w-full"></div>
-//             <span className="bg-white px-3 text-xs text-slate-400 uppercase absolute">Or continue with</span>
+//             <div className="border-t border-slate-200 dark:border-slate-700 w-full"></div>
+//             <span className="bg-white dark:bg-slate-900 px-3 text-xs text-slate-400 uppercase absolute">Or continue with</span>
 //           </div>
 
     
 //           <button 
 //   type="button"
 //   onClick={handleGoogleClick}
-//   className="w-full border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium py-2.5 rounded-lg flex items-center justify-center gap-3 transition-all"
+//   className="w-full border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-slate-700 font-medium py-2.5 rounded-lg flex items-center justify-center gap-3 transition-all"
 // >
 //   {/* Official Google Color SVG */}
 //   <svg width="18" height="18" viewBox="0 0 24 24">
@@ -182,7 +182,7 @@
 //         </div>
 
 //         <div className="mt-8 text-center border-t border-slate-100 pt-6">
-//           <p className="text-sm text-slate-600">
+//           <p className="text-sm text-slate-600 dark:text-slate-400">
 //             {isLogin ? "Don't have an account?" : "Already have an account?"}
 //             <button 
 //               type="button"
@@ -291,7 +291,7 @@ const AuthPage = () => {
       </div>
 
       {/* 2. LOGIN CARD LAYER: Zooming, Lifting, and Glowing */}
-      <div className="relative z-10 max-w-md w-full bg-white/85 backdrop-blur-2xl rounded-3xl p-8 border border-white/40 shadow-2xl transition-all duration-500 ease-out hover:scale-[1.03] hover:-translate-y-2 hover:shadow-[0_20px_60px_rgba(37,99,235,0.45)]">
+      <div className="relative z-10 max-w-md w-full bg-white dark:bg-slate-900/85 backdrop-blur-2xl rounded-3xl p-8 border border-white/40 shadow-2xl transition-all duration-500 ease-out hover:scale-[1.03] hover:-translate-y-2 hover:shadow-[0_20px_60px_rgba(37,99,235,0.45)]">
         
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-slate-900 tracking-tight">
@@ -318,7 +318,7 @@ const AuthPage = () => {
                 type="text" 
                 placeholder="Full Name"
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all"
+                className="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all"
                 required
               />
             </div>
@@ -331,7 +331,7 @@ const AuthPage = () => {
               placeholder="Email Address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all"
+              className="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all"
               required
             />
           </div>
@@ -343,13 +343,13 @@ const AuthPage = () => {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-10 pr-12 py-3 bg-slate-50/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all"
+              className="w-full pl-10 pr-12 py-3 bg-slate-50/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all"
               required
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 transition-colors"
+              className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 dark:text-slate-400 transition-colors"
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
@@ -367,14 +367,14 @@ const AuthPage = () => {
 
         <div className="mt-8">
           <div className="relative flex items-center justify-center mb-6">
-            <div className="border-t border-slate-200 w-full"></div>
-            <span className="bg-white/0 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest absolute">Or continue with</span>
+            <div className="border-t border-slate-200 dark:border-slate-700 w-full"></div>
+            <span className="bg-white dark:bg-slate-900/0 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest absolute">Or continue with</span>
           </div>
 
           <button 
             type="button"
             onClick={handleGoogleClick}
-            className="w-full border border-slate-200 bg-white/50 hover:bg-white hover:border-blue-200 text-slate-700 font-semibold py-3 rounded-xl flex items-center justify-center gap-3 transition-all duration-200 hover:shadow-md active:scale-[0.98]"
+            className="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50 hover:bg-white dark:bg-slate-900 hover:border-blue-200 text-slate-700 font-semibold py-3 rounded-xl flex items-center justify-center gap-3 transition-all duration-200 hover:shadow-md active:scale-[0.98]"
           >
             <svg width="20" height="20" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -387,7 +387,7 @@ const AuthPage = () => {
         </div>
 
         <div className="mt-8 text-center border-t border-slate-100 pt-6">
-          <p className="text-sm text-slate-600 font-medium">
+          <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">
             {isLogin ? "Don't have an account?" : "Already have an account?"}
             <button 
               type="button"

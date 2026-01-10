@@ -13,12 +13,12 @@ const Team = () => {
     <div className="min-h-[80vh] py-12 px-4 bg-slate-50">
       <div className="max-w-4xl mx-auto text-center">
         <h2 className="text-4xl font-bold text-slate-900 mb-4">Meet Our Team</h2>
-        <p className="text-slate-600 mb-12">The minds behind Civic Lens</p>
+        <p className="text-slate-600 dark:text-slate-400 mb-12">The minds behind Civic Lens</p>
         
         {/* Changed grid-cols to 2 for the 2x2 layout */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 max-w-2xl mx-auto">
           {teammates.map((member, index) => (
-            <div key={index} className="bg-white p-6 rounded-2xl shadow-md border border-slate-100 hover:shadow-xl transition-shadow">
+            <div key={index} className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-md border border-slate-100 hover:shadow-xl transition-shadow">
               <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <User size={40} className="text-blue-600" />
               </div>

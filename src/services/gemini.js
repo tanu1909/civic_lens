@@ -1,12 +1,12 @@
 import {GoogleGenerativeAI} from "@google/generative-ai";
 
-const API_KEY=import.meta.env.GEMINI_API_KEY;//api key
+const API_KEY=import.meta.env.VITE_GEMINI_API_KEY;//api key
 const genAI=new GoogleGenerativeAI(API_KEY);
 
 export async function ImageAnalysis(imageFile){//function to analyze image
    try{
     if(!API_KEY){
-        console.log("your API key is missing");
+        console.log("your API key is missing"); 
         return null;
     }
 

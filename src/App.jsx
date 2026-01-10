@@ -26,6 +26,9 @@ const App = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+
+
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -46,11 +49,11 @@ const App = () => {
   return (
     <ErrorBoundary>
 <Router>
-      <div className="flex flex-col min-h-screen w-full overflow-hidden">
+      <div className="flex flex-col min-h-screen bg-primary dark:bg-primary-dark text-slate-900 dark:text-slate-50 transition-colors duration-300">
         <Toaster position="top-center" reverseOrder={false} />
         <Navbar user={user} />
 
-        <main className="flex-grow">
+        <main className="flex-grow relative z-0">
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Home />} />
@@ -59,10 +62,10 @@ const App = () => {
             <Route path="/map" element={<MapPage />} />
 
             {/* Auth Routes */}
-            <Route 
-              path="/login" 
-              element={!user ? <RoleSelection /> : <Navigate to="/" replace />} 
-            />
+           <Route
+  path="/login"
+  element={!user ? <AuthPage /> : <Navigate to="/" replace />}
+/>
             <Route
               path="/auth"
               element={!user ? <AuthPage /> : <Navigate to="/" replace />}
