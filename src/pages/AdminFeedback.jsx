@@ -39,7 +39,7 @@ const AdminFeedback = () => {
 
         <div className="grid gap-6">
           {feedbacks.map((item) => (
-            <div key={item.id} className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+            <div key={item.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
               <div className="flex justify-between items-start mb-4">
                 <h3 className="text-lg font-bold text-slate-800">{item.subject}</h3>
                 <span className="flex items-center gap-1 text-xs text-slate-400">
@@ -48,7 +48,7 @@ const AdminFeedback = () => {
                 </span>
               </div>
               
-              <p className="text-slate-600 dark:text-slate-400 mb-4 bg-slate-50 p-4 rounded-lg italic">
+              <p className="text-slate-600 mb-4 bg-slate-50 p-4 rounded-lg italic">
                 "{item.message}"
               </p>
 
@@ -62,7 +62,7 @@ const AdminFeedback = () => {
           ))}
 
           {feedbacks.length === 0 && (
-            <div className="text-center py-20 bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-300">
+            <div className="text-center py-20 bg-white rounded-xl border border-dashed border-slate-300">
               <p className="text-slate-400">No feedback received yet.</p>
             </div>
           )}

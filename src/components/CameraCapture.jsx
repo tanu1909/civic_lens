@@ -95,7 +95,7 @@ const CameraCapture = () => {
         }
     };
 
-    //  LOCATION FUNCTION 
+    // --- LOCATION FUNCTION ---
     const detectLocation = () => {
         if (!("geolocation" in navigator)) {
             setLocationMode('manual');
@@ -115,7 +115,7 @@ const CameraCapture = () => {
         );
     };
 
-    //  HANDLE SUBMIT 
+    // --- HANDLE SUBMIT ---
     const handleSubmit = async () => {
         if (!auth.currentUser) return alert("Please Login!");
         
@@ -174,14 +174,14 @@ const CameraCapture = () => {
     return (
         <div className="fixed inset-0 bg-gray-900/90 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-6">
             
-            <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-fade-in-up">
+            <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-fade-in-up">
                 
                 {/* HEADER */}
                 <div className="bg-blue-600 p-4 flex justify-between items-center shrink-0">
                     <h2 className="text-lg font-bold text-white flex items-center gap-2">
                         📸 New Report
                     </h2>
-                    <button onClick={() => navigate('/')} className="bg-white dark:bg-slate-900/20 p-2 rounded-full hover:bg-white dark:bg-slate-900/30 text-white transition">
+                    <button onClick={() => navigate('/')} className="bg-white/20 p-2 rounded-full hover:bg-white/30 text-white transition">
                         <X size={18} />
                     </button>
                 </div>
@@ -217,7 +217,7 @@ const CameraCapture = () => {
                         )}
                         
                         {loading && (
-                            <div className="absolute inset-0 bg-white dark:bg-slate-900/90 flex flex-col items-center justify-center z-30">
+                            <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center z-30">
                                 <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-600 border-t-transparent"></div>
                                 <p className="text-blue-600 font-bold mt-3 text-sm animate-pulse">{loadingText}</p>
                             </div>
@@ -312,7 +312,7 @@ const CameraCapture = () => {
                                             value={manualAddress}
                                             onChange={(e) => setManualAddress(e.target.value)}
                                             placeholder="Enter location (e.g. Civil Lines, Market)"
-                                            className="w-full pl-10 pr-4 py-3 bg-red-50 border border-red-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:bg-white dark:bg-slate-900 outline-none text-sm shadow-sm transition-all"
+                                            className="w-full pl-10 pr-4 py-3 bg-red-50 border border-red-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:bg-white outline-none text-sm shadow-sm transition-all"
                                             autoFocus
                                         />
                                         <p className="text-[10px] text-red-500 mt-1.5 ml-1 font-medium flex items-center gap-1">
@@ -328,7 +328,7 @@ const CameraCapture = () => {
 
                 {/* FOOTER */}
                 {report && (
-                    <div className="p-4 border-t border-gray-100 bg-white dark:bg-slate-900 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                    <div className="p-4 border-t border-gray-100 bg-white shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
                         <button
                             onClick={handleSubmit}
                             disabled={isSubmitting}
@@ -356,4 +356,3 @@ const CameraCapture = () => {
 };
 
 export default CameraCapture;
-

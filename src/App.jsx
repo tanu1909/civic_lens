@@ -2,15 +2,12 @@ import React, { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./services/firebase";
-import { Toaster } from "react-hot-toast";
 
 // Components
 import Navbar from "./components/Navbar";
 import FooterCard from "./components/FooterCard";
 import CameraCapture from "./components/CameraCapture";
 import MapPage from "./components/MapPage";
-import RoleSelection from "./components/RoleSelection";
-import ErrorBoundary from "./components/ErrorBoundary";
 
 // Pages
 import Home from "./pages/Home";
@@ -20,14 +17,10 @@ import Feedback from "./pages/Feedback";
 import UserHistory from "./pages/UserHistory";
 import AdminFeedback from "./pages/AdminFeedback";
 import AdminDashboard from "./pages/AdminDashboard";
-import Team from "./pages/Team";
 
 const App = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-
-
-
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -39,21 +32,16 @@ const App = () => {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen text-xl font-semibold">
-        Loading...
-      </div>
-    );
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
   return (
-    <ErrorBoundary>
-<Router>
-      <div className="flex flex-col min-h-screen bg-primary dark:bg-primary-dark text-slate-900 dark:text-slate-50 transition-colors duration-300">
-        <Toaster position="top-center" reverseOrder={false} />
+    <Router>
+      <div className="flex flex-col min-h-screen w-full overflow-hidden">
+        
         <Navbar user={user} />
 
-        <main className="flex-grow relative z-0">
+        <main className="flex-grow">
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Home />} />
@@ -61,17 +49,13 @@ const App = () => {
             <Route path="/feedback" element={<Feedback />} />
             <Route path="/map" element={<MapPage />} />
 
-            {/* Auth Routes */}
-           <Route
-  path="/login"
-  element={!user ? <AuthPage /> : <Navigate to="/" replace />}
-/>
+            {/* Auth Route: Redirect to Home if already logged in */}
             <Route
-              path="/auth"
+              path="/login"
               element={!user ? <AuthPage /> : <Navigate to="/" replace />}
             />
 
-            {/* Protected Routes */}
+            {/* Protected Route: Redirect to Login if not logged in */}
             <Route
               path="/scan"
               element={
@@ -82,19 +66,19 @@ const App = () => {
                 )
               }
             />
+
+            {/* User History */}
             <Route path="/history" element={<UserHistory />} />
-            <Route path="/team" element={<Team />} />
 
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/feedback" element={<AdminFeedback />} />
           </Routes>
         </main>
+
         <FooterCard />
-</div>   
+      </div>
     </Router>
-    </ErrorBoundary>
-    
   );
 };
 

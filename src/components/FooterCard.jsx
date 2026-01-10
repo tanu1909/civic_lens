@@ -1,19 +1,17 @@
 import React from 'react';
 import { Link, NavLink } from 'react-router-dom'; 
-import { Mail, MessageSquare, Info,User } from 'lucide-react';
+import { Mail, MessageSquare, Info } from 'lucide-react';
 
 const FooterCard = () => {
 
 const navLinkStyles = ({ isActive }) => 
-    `flex items-center gap-1.5 text-sm transition-all duration-300 ${
-      isActive 
-        ? "text-blue-600 font-semibold" 
-        : "text-slate-600 dark:text-slate-400 hover:text-blue-600 font-medium"
-    }`;
+    isActive 
+      ? "text-blue-600 font-semibold" // Styles for the active page
+      : "text-gray-600 hover:text-blue-600 font-medium transition-colors"; // Styles for other pages
 
 
   return (
-    <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 py-4 mt-auto">
+    <footer className="bg-white border-t border-slate-200 py-4 mt-auto">
       <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
         
        
@@ -43,14 +41,14 @@ const navLinkStyles = ({ isActive }) =>
             <span>Feedback</span>
           </NavLink>
 
-         <NavLink 
-            to="/team" 
-            className={navLinkStyles}
-          >
-          <User size={16} />
-          <span>Our Team</span>
-          </NavLink>
          
+          <a 
+            href="mailto:tanuchoudhary1319@gmail.com" 
+            className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors"
+          >
+            <Mail size={16} />
+            <span>Contact Us</span>
+          </a>
         </div>
       </div>
     </footer>
@@ -58,7 +56,3 @@ const navLinkStyles = ({ isActive }) =>
 };
 
 export default FooterCard;
-
-
-
-
