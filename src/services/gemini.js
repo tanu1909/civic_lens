@@ -6,7 +6,7 @@ const genAI=new GoogleGenerativeAI(API_KEY);
 export async function ImageAnalysis(imageFile){//function to analyze image
    try{
     if(!API_KEY){
-        console.log("your API key is missing");
+        console.log("your API key is missing"); 
         return null;
     }
 
