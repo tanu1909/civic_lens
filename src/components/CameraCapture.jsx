@@ -1,10 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { supabase } from '../supabaseClient'; // Make sure this file exists and exports 'supabase'
+import { supabase } from '../supabaseClient'; 
 import { uploadImageToStorage, saveReport } from '../services/reportService';
 import { auth } from '../services/firebase';
 import { useNavigate } from 'react-router-dom';
 import imageCompression from 'browser-image-compression';
-import { MapPin, Edit2, CheckCircle, RotateCcw, X } from 'lucide-react'; 
+import { CheckCircle, RotateCcw, X } from 'lucide-react'; 
 
 const CameraCapture = () => {
     const navigate = useNavigate();
@@ -21,13 +21,12 @@ const CameraCapture = () => {
     const [loading, setLoading] = useState(false);
     const [loadingText, setLoadingText] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [showToast, setShowToast] = useState(false);
+    const [isSuspicious, setIsSuspicious] = useState(false);
     
     // LOCATION STATES
     const [locationMode, setLocationMode] = useState('auto'); 
     const [manualAddress, setManualAddress] = useState("");
 
-    // Helper: Convert File to Base64 string for the Edge Function
     const fileToBase64 = (file) => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -48,7 +47,6 @@ const CameraCapture = () => {
         setReport(null); 
 
         try {
-            // 1. Compress Image
             const options = { maxSizeMB: 0.1, maxWidthOrHeight: 800, useWebWorker: true };
             const compressedFile = await imageCompression(file, options);
             const fileType = compressedFile.type;
@@ -57,20 +55,15 @@ const CameraCapture = () => {
             setImage(URL.createObjectURL(compressedFile));
             setImageFile(compressedFile);
             
-            // 2. Prepare Base64 Data
             setLoadingText("AI Analysis...");
             const base64Data = await fileToBase64(compressedFile);
 
-            // 3. Invoke Supabase Edge Function (The Secure Way)
             const { data, error } = await supabase.functions.invoke('analyze-image', {
-                body: { imageBase64: base64Data, 
-                    mimeType: fileType }
+                body: { imageBase64: base64Data, mimeType: fileType }
             });
 
             if (error) throw new Error(error.message);
 
-            // 4. Parse AI Results
-            // The Edge function returns { analysis: "..." }. We parse the internal string.
             const rawText = data.analysis;
             const cleanJson = rawText.replace(/```json|```/g, "").trim();
             const aiResult = JSON.parse(cleanJson);
@@ -84,7 +77,7 @@ const CameraCapture = () => {
             }
 
             setReport(aiResult);
-            setManualSeverity(aiResult.severity || 5);
+            setManualSeverity(aiResult.severity || 0);
             detectLocation();
 
         } catch (error) {
@@ -92,7 +85,7 @@ const CameraCapture = () => {
             alert("Analysis Failed: " + error.message);
             handleRetake();
         } finally {
-            setLoading(false);
+            loading && setLoading(false);
         }
     };
 
@@ -123,7 +116,19 @@ const CameraCapture = () => {
 
     const handleSubmit = async () => {
         if (!auth.currentUser) return alert("Please Login!");
+        
+        // Block submission if severity is 0 (Non-Civic / Technical Data Plot)
+        if (manualSeverity === 0) {
+            return alert("⚠️ Submission Denied: This image does not contain a valid public infrastructure hazard.");
+        }
         if (manualSeverity < 4) return alert("Severity must be 4+ to report.");
+         
+        if( Math.abs((report.severity || 0) - manualSeverity) > 4){
+            setIsSuspicious(true);
+            return alert("⚠️ Submission Denied: This report is found suspicious.");
+            navigate('/home');
+        }
+
 
         setIsSubmitting(true);
         setLoadingText("Submitting...");
@@ -131,45 +136,61 @@ const CameraCapture = () => {
         try {
             const imageUrl = await uploadImageToStorage(imageFile);
             
-            let finalLocation = { lat: 0, lng: 0, address: manualAddress || "Manual Location" };
+            let finalLocationString = manualAddress || "Manual Location";
             if (locationMode === 'success') {
                  const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
-                 finalLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude, address: "GPS Detected" };
+                 finalLocationString = `Lat: ${pos.coords.latitude}, Lng: ${pos.coords.longitude}`;
             }
 
-            await saveReport({
-                userId: auth.currentUser.uid,
-                imageUrl,
-                issue: report.issue,
-                description: report.description,
-                severity: manualSeverity,
-                location: finalLocation,
-                status: 'Pending',
-                isSuspicious: Math.abs((report.severity || 0) - manualSeverity) > 4
-            });
+            // Exactly matching existing database table schema names
+            const { error: dbError } = await supabase
+                .from('reports')
+                .insert([
+                    {
+                        userId: auth.currentUser.uid,
+                        imageUrl: imageUrl,
+                        issue: report.issue,
+                        description: report.description,
+                        severity: manualSeverity,
+                        location: finalLocationString,
+                        status: 'pending',
+                        aiAnalysis: JSON.stringify(report),
+                        isSuspicious: Math.abs((report.severity || 0) - manualSeverity) > 4,
+                        isSafetyHazard: manualSeverity >= 8,
+                        votes: 0
+                    }
+                ]);
 
-            setShowToast(true);
-            setTimeout(() => navigate('/history'), 2000);
+            if (dbError) throw dbError;
+
+            alert("🚀 Report submitted successfully!");
+            navigate('/history');
 
         } catch (e) {
             alert("Submission Error: " + e.message);
+        } finally {
             setIsSubmitting(false);
         }
     };
 
     return (
-        <div className="fixed inset-0 bg-gray-900/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-fade-in-up">
+        // z-[9999] layer shifts modal overlay over standard application layouts
+        <div className="fixed inset-0 bg-gray-900/90 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 overflow-y-auto">
+            
+            {/* Clamped height card bounds container with unified flex wrapper */}
+            <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl shadow-2xl flex flex-col my-auto max-h-[85vh] overflow-hidden">
                 
-                {/* Header */}
-                <div className="bg-blue-600 p-4 flex justify-between items-center">
+                {/* Header Context Bar */}
+                <div className="bg-blue-600 p-4 flex justify-between items-center shrink-0">
                     <h2 className="text-lg font-bold text-white flex items-center gap-2">📸 New Civic Report</h2>
-                    <button onClick={() => navigate('/')} className="text-white hover:opacity-70"><X size={20} /></button>
+                    <button onClick={() => navigate('/')} className="text-white hover:opacity-70 transition-opacity p-1">
+                        <X size={20} />
+                    </button>
                 </div>
 
-                {/* Body */}
+                {/* Content Track Container */}
                 <div className="flex-1 overflow-y-auto p-5 space-y-6">
-                    <div className="relative w-full h-56 bg-gray-100 rounded-xl overflow-hidden border border-gray-200">
+                    <div className="relative w-full h-56 bg-gray-100 dark:bg-slate-800 rounded-xl overflow-hidden border border-gray-200 dark:border-slate-700 shrink-0">
                         {image ? (
                             <>
                                 <img src={image} className="w-full h-full object-cover" alt="Preview" />
@@ -178,7 +199,7 @@ const CameraCapture = () => {
                                 </button>
                             </>
                         ) : (
-                            <label className="flex flex-col items-center justify-center h-full cursor-pointer hover:bg-gray-50">
+                            <label className="flex flex-col items-center justify-center h-full cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 conversion-colors">
                                 <span className="text-4xl mb-2">📷</span>
                                 <span className="text-sm text-gray-500 font-medium">Click to capture issue</span>
                                 <input type="file" accept="image/*" className="hidden" onChange={handleUpload} ref={fileInputRef} />
@@ -194,35 +215,42 @@ const CameraCapture = () => {
                     </div>
 
                     {report && (
-                        <div className="animate-fade-in space-y-4">
-                            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                                <h3 className="font-bold text-gray-900">{report.issue}</h3>
-                                <p className="text-sm text-gray-600 mt-1">{report.description}</p>
+                        <div className="space-y-4">
+                            <div className="bg-blue-50 dark:bg-slate-800 p-4 rounded-xl border border-blue-100 dark:border-slate-700">
+                                <h3 className="font-bold text-gray-900 dark:text-white">{report.issue}</h3>
+                                <p className="text-sm text-gray-600 dark:text-slate-300 mt-1">{report.description}</p>
                             </div>
 
                             <div>
                                 <label className="text-xs font-bold text-gray-500 uppercase">Severity: {manualSeverity}/10</label>
-                                <input type="range" min="1" max="10" value={manualSeverity} onChange={(e) => setManualSeverity(parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg accent-blue-600 mt-2" />
+                                <input 
+                                    type="range" 
+                                    min="0" 
+                                    max="10" 
+                                    value={manualSeverity} 
+                                    onChange={(e) => setManualSeverity(parseInt(e.target.value))} 
+                                    className="w-full h-2 bg-gray-200 dark:bg-slate-700 rounded-lg accent-blue-600 mt-2" 
+                                />
                             </div>
 
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-gray-500 uppercase">Location Status</label>
                                 {locationMode === 'success' ? (
-                                    <div className="p-3 bg-green-50 text-green-700 rounded-lg text-sm font-bold flex items-center gap-2">
+                                    <div className="p-3 bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 rounded-lg text-sm font-bold flex items-center gap-2">
                                         <CheckCircle size={16} /> GPS Location Verified
                                     </div>
                                 ) : (
-                                    <input type="text" value={manualAddress} onChange={(e) => setManualAddress(e.target.value)} placeholder="Type location address..." className="w-full p-3 bg-red-50 border border-red-200 rounded-lg text-sm" />
+                                    <input type="text" value={manualAddress} onChange={(e) => setManualAddress(e.target.value)} placeholder="Type location address..." className="w-full p-3 bg-red-50 dark:bg-slate-800 border border-red-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white" />
                                 )}
                             </div>
                         </div>
                     )}
                 </div>
 
-                {/* Submit Button */}
+                {/* Submit Action Block */}
                 {report && (
-                    <div className="p-4 border-t bg-white dark:bg-slate-900">
-                        <button onClick={handleSubmit} disabled={isSubmitting} className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg disabled:bg-gray-400">
+                    <div className="p-4 border-t border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
+                        <button onClick={handleSubmit} disabled={isSubmitting} className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg disabled:bg-gray-400 dark:disabled:bg-slate-700 transition-colors">
                             {isSubmitting ? 'Sending...' : '🚀 Submit Report'}
                         </button>
                     </div>

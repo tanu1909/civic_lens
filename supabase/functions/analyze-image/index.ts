@@ -16,16 +16,27 @@ serve(async (req) => {
 
     const cleanBase64 = imageBase64.split('base64,').pop(); 
 
-    // 1. Initialize API
     const genAI = new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY')!)
-    
-    // 2. MODEL NAME FIX: Ensure this matches the exact API ID
-    // In code, it is usually "gemini-2.5-flash" (lowercase with hyphens)
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
 
-    // 3. GENERATE CONTENT FIX: Simplified array format to avoid "not iterable" error
-    const prompt = `Analyze this image for civic infrastructure issues. Return ONLY a JSON object:
-    { "issue": "Title", "description": "One sentence", "severity": 1-10, "issue_detected": true }`;
+    // Stricter prompt enforcing your table's direct keys and constraints
+    const prompt = `
+      You are an expert infrastructure auditing agent working on the CivicLens ecosystem.
+      
+      CRITICAL EVALUATION RULES:
+      1. Carefully inspect the image provided.
+      2. If the image contains technical data plots, charts, line graphs (such as gait cycle analytics or acceleration lines), company logos (e.g., Boult, Boat), portraits, text documents, or indoor items, you MUST consider this a non-civic entity.
+      3. For any non-civic entity, you MUST strictly set "severity" to 0.
+
+      Provide your response ONLY as a clean minified JSON object structure. Do not apply markdown tags (such as \`\`\`json).
+
+      JSON Schema Target:
+      {
+        "issue": "Specific short category title (or 'No direct civic infrastructure issue detectable')",
+        "description": "Clear sentence describing the visible hazard or context.",
+        "severity": 0
+      }
+    `;
 
     const result = await model.generateContent([
       prompt,
