@@ -158,7 +158,7 @@ const CommunityFeed = () => {
         //  dark mode background
         <div className="min-h-screen bg-[#ACCFFA]  dark:bg-gray-500 pb-20 transition-colors duration-300">
             {/* HEADER */}
-            <div className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 sticky top-16 z-10 shadow-sm transition-all">
+            <div className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800  top-16 z-10 shadow-sm transition-all">
                 <div className="max-w-7xl mx-auto px-4 py-4 space-y-4">
                     
                     {/* TOP ROW */}

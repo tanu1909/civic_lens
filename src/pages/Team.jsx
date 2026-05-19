@@ -5,8 +5,8 @@ const Team = () => {
   const teammates = [
     { name: "Tanu Choudhary", linkedin: "https://www.linkedin.com/in/tanu-choudhary-6a0974331" },
     { name: "Anshika Yadav", linkedin: "https://www.linkedin.com/in/anshika-yadav-65051431b?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" },
-    { name: "Apoorva Gupta", linkedin: "https://www.linkedin.com/in/apoorva-gupta-55463a331?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" },
     { name: "Shivangi Singh", linkedin: "https://www.linkedin.com/in/shivangi-singh-574b89331?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" },
+    { name: "Apoorva Gupta", linkedin: "https://www.linkedin.com/in/apoorva-gupta-55463a331?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" },
   ];
 
   return (

@@ -151,7 +151,7 @@
 //             <span className="bg-white dark:bg-slate-900 px-3 text-xs text-slate-400 uppercase absolute">Or continue with</span>
 //           </div>
 
-    
+    // 
 //           <button 
 //   type="button"
 //   onClick={handleGoogleClick}

@@ -61,7 +61,7 @@ const Navbar = ({ user }) => {
       : "text-slate-600 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-400"}`;
 
   return (
-    <nav className="sticky top-0 z-[9999] transition-all duration-500 px-4 pt-4">
+    <nav className=" top-0 z-[9999] transition-all duration-500 px-4 pt-4">
       <div className={`max-w-7xl mx-auto px-6 md:px-8 py-3 rounded-2xl transition-all duration-300 border
         ${scrolled 
           ? "bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-lg border-slate-200 dark:border-slate-700/50" 
